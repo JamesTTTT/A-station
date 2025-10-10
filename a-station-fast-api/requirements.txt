@@ -1,0 +1,28 @@
+# --- Web Framework ---
+fastapi
+uvicorn[standard]
+
+# --- Database & ORM ---
+sqlalchemy
+psycopg2-binary
+alembic
+
+# --- Data Validation & Settings ---
+pydantic
+pydantic-settings
+email-validator
+
+# --- Security & Authentication ---
+passlib[bcrypt]
+python-jose[cryptography]
+
+# --- Asynchronous Tasks ---
+celery
+redis
+
+# --- Billing ---
+stripe
+
+# --- API Interaction & Testing ---
+httpx
+pytest
