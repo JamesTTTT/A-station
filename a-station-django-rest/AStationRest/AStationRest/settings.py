@@ -45,10 +45,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     'rest_framework',
+    "rest_framework.authtoken",
     'users.apps.UsersConfig',
     'station.apps.StationConfig',
-    'core.apps.CoreConfig'
+    'core.apps.CoreConfig',
+    "oauth2_provider",
+    "dj_rest_auth",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.github",
 ]
 
 MIDDLEWARE = [
@@ -59,6 +67,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'AStationRest.urls'
@@ -116,6 +125,27 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = ("allauth.account.auth_backends.AuthenticationBackend",)
+
+REST_USE_JWT = True 
+SITE_ID = 1 #Set site ID
+
+# Disable email verification for simplicity
+ACCOUNT_EMAIL_VERIFICATION = "none"
+LOGIN_REDIRECT_URL = "/"  # Redirect URL after successful login
+LOGOUT_REDIRECT_URL = "/"  # Redirect URL after logout
+
+SOCIALACCOUNT_PROVIDERS = {
+    "github": {
+        "APP": {
+            "client_id": env('GITHUB_CLIENT_ID'),
+            "secret": env('GITHUB_SECRET_KEY'),
+            "key": "",
+            "redirect_uri": "http://localhost:8000/accounts/github/login/callback/",
+        }
+    }
+}
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
@@ -144,3 +174,15 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
+}
+
+CSRF_COOKIE_HTTPONLY = False

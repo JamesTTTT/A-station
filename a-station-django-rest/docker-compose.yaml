@@ -5,14 +5,8 @@ services:
     build: .
     ports:
       - "8000:8000"
-    environment:
-      - DEBUG=1
-      - DB_NAME=astation
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-      - DB_HOST=db
-      - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
     depends_on:
       - db
       - redis
@@ -43,13 +37,8 @@ services:
     depends_on:
       - db
       - redis
-    environment:
-      - DB_NAME=astation
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-      - DB_HOST=db
-      - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
     volumes:
       - ./ansible_files:/app/ansible_files
       - ~/.ssh:/root/.ssh:ro

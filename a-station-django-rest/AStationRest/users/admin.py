@@ -38,3 +38,6 @@ class UserAdmin(BaseUserAdmin):
     def workspace_count(self, obj):
         return obj.workspaces.count()
     workspace_count.short_description = 'Workspaces'
+
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)
