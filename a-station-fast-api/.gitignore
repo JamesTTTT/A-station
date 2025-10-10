@@ -292,3 +292,5 @@ htmlcov/
 
 # Temporary files
 *.tmp
+
+../.idea/
