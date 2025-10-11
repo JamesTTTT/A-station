@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 # from core.config import settings
-from schemas.health import HealthResponse
+from app.schemas.health import HealthResponse
 from fastapi.middleware.cors import CORSMiddleware
-# from routes.posts import router
+from app.api.endpoints.auth import auth_router
 
 app = FastAPI(
     title="A-Station",
@@ -21,7 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# app.include_router(router=router, prefix="/api")
+app.include_router(router=auth_router)
 
 @app.get("/", response_model=HealthResponse)
 async def health():
