@@ -1,16 +1,17 @@
+from pydantic import EmailStr
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.models.user import User
 from app.schemas.user import UserCreate
 import uuid
-from typing import Optional
+from typing import Optional, Any
 
 
 def get_user(db: Session, user_id: uuid.UUID) -> Optional[User]:
     return db.query(User).filter(User.id == user_id).first()
 
 
-def get_user_by_email(db: Session, email: str) -> Optional[User]:
+def get_user_by_email(db: Session, email: EmailStr) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
 
 
@@ -24,7 +25,7 @@ def get_user_by_email_or_username(db: Session, identifier: str) -> Optional[User
     ).first()
 
 
-def get_users(db: Session, skip: int = 0, limit: int = 100) -> list[User]:
+def get_users(db: Session, skip: int = 0, limit: int = 100) -> list[type[User]]:
     return db.query(User).offset(skip).limit(limit).all()
 
 
@@ -60,7 +61,7 @@ def delete_user(db: Session, user_id: uuid.UUID) -> bool:
     return False
 
 
-def user_exists(db: Session, email: str = None, username: str = None) -> bool:
+def user_exists(db: Session, email: EmailStr = None, username: str = None) -> bool:
     query = db.query(User)
 
     if email and username:
