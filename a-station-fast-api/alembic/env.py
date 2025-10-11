@@ -1,22 +1,22 @@
 from logging.config import fileConfig
 import os
+import sys
+from pathlib import Path
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
+from dotenv import load_dotenv
 from alembic import context
+
+
+load_dotenv()
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from app.models.base import Base
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-
-from app.models.base import Base
-
-from app.models.user import User
-from app.models.workspace import Workspace
-from app.models.inventory import Credential, Variable, Host, InventoryGroup
-from app.models.job import Job
-from app.models.playbook import Playbook
 
 target_metadata = Base.metadata
 
