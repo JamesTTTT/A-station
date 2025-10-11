@@ -61,15 +61,15 @@ class InventoryGroup(TimestampedUUIDModel):
     parent_groups: Mapped[List["InventoryGroup"]] = relationship(
         "InventoryGroup",
         secondary=inventory_group_association,
-        primaryjoin=inventory_group_association.c.child_group_id == TimestampedUUIDModel.id,
-        secondaryjoin=inventory_group_association.c.parent_group_id == TimestampedUUIDModel.id,
+        primaryjoin="InventoryGroup.id == inventory_group_association.c.child_group_id",
+        secondaryjoin="InventoryGroup.id == inventory_group_association.c.parent_group_id",
         back_populates="child_groups",
     )
 
     child_groups: Mapped[List["InventoryGroup"]] = relationship(
         "InventoryGroup",
         secondary=inventory_group_association,
-        primaryjoin=inventory_group_association.c.parent_group_id == TimestampedUUIDModel.id,
-        secondaryjoin=inventory_group_association.c.child_group_id == TimestampedUUIDModel.id,
+        primaryjoin="InventoryGroup.id == inventory_group_association.c.parent_group_id",
+        secondaryjoin="InventoryGroup.id == inventory_group_association.c.child_group_id",
         back_populates="parent_groups",
     )
