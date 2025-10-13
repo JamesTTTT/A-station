@@ -4,9 +4,7 @@ from typing import Optional, TYPE_CHECKING
 from datetime import datetime
 from .base import TimestampedUUIDModel
 import uuid
-
-if TYPE_CHECKING:
-    from .playbook import Playbook
+from .playbook import Playbook
 
 class Job(TimestampedUUIDModel):
     __tablename__ = "jobs"
