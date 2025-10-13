@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.schemas.user import UserCreate, UserLogin, UserRead, TokenResponse
-from app.crud.user import (
+from app.crud.user_crud import (
     create_user,
     get_user_by_email,
     user_exists
