@@ -24,6 +24,7 @@ app.add_middleware(
 )
 app.add_middleware(APIKeyMiddleware)
 app.include_router(router=auth_router)
+app.include_router(router=workspace_router)
 
 
 @app.get("/", response_model=HealthResponse)
