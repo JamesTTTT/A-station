@@ -1,9 +1,35 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@fontsource-variable/plus-jakarta-sans";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    /* Font Family */
+    --font-family-sans:
+        "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+        "Noto Color Emoji";
+
+    /* Font Weights */
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* Fluid Typography Scale */
+    --font-size-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+    --font-size-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+    --font-size-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+    --font-size-lg: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
+    --font-size-xl: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
+    --font-size-2xl: clamp(1.5rem, 1.3rem + 1vw, 1.875rem);
+    --font-size-3xl: clamp(1.875rem, 1.6rem + 1.375vw, 2.25rem);
+    --font-size-4xl: clamp(2.25rem, 1.9rem + 1.75vw, 3rem);
+    --font-size-5xl: clamp(3rem, 2.5rem + 2.5vw, 3.75rem);
+    --font-size-6xl: clamp(3.75rem, 3rem + 3.75vw, 4.5rem);
+
     /* Radius */
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
@@ -44,6 +70,8 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* OG COLOURS */
+/*
 :root {
     --radius: 0.625rem;
     --background: oklch(1 0 0);
@@ -112,12 +140,85 @@
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
 }
+*/
+
+:root {
+    --radius: 0.625rem;
+    --background: oklch(0.99 0 0);
+    --foreground: oklch(0.2 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.2 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.2 0 0);
+    --primary: oklch(0.35 0.25 264);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.95 0.02 264);
+    --secondary-foreground: oklch(0.25 0.25 264);
+    --muted: oklch(0.96 0 0);
+    --muted-foreground: oklch(0.5 0 0);
+    --accent: oklch(0.95 0.02 264);
+    --accent-foreground: oklch(0.25 0.25 264);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(1 0 0);
+    --border: oklch(0.9 0 0);
+    --input: oklch(0.9 0 0);
+    --ring: oklch(0.35 0.25 264);
+    --chart-1: oklch(0.35 0.25 264);
+    --chart-2: oklch(0.5 0.2 264);
+    --chart-3: oklch(0.65 0.15 264);
+    --chart-4: oklch(0.55 0.18 220);
+    --chart-5: oklch(0.45 0.22 280);
+    --sidebar: oklch(1 0 0);
+    --sidebar-foreground: oklch(0.2 0 0);
+    --sidebar-primary: oklch(0.35 0.25 264);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.95 0.02 264);
+    --sidebar-accent-foreground: oklch(0.25 0.25 264);
+    --sidebar-border: oklch(0.9 0 0);
+    --sidebar-ring: oklch(0.35 0.25 264);
+}
+
+.dark {
+    --background: oklch(0.15 0 0);
+    --foreground: oklch(0.98 0 0);
+    --card: oklch(0.18 0.02 264);
+    --card-foreground: oklch(0.98 0 0);
+    --popover: oklch(0.18 0.02 264);
+    --popover-foreground: oklch(0.98 0 0);
+    --primary: oklch(0.55 0.25 264);
+    --primary-foreground: oklch(0.98 0 0);
+    --secondary: oklch(0.25 0.05 264);
+    --secondary-foreground: oklch(0.85 0.15 264);
+    --muted: oklch(0.25 0.02 264);
+    --muted-foreground: oklch(0.65 0 0);
+    --accent: oklch(0.3 0.08 264);
+    --accent-foreground: oklch(0.85 0.15 264);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.98 0 0);
+    --border: oklch(0.28 0.02 264);
+    --input: oklch(0.28 0.02 264);
+    --ring: oklch(0.55 0.25 264);
+    --chart-1: oklch(0.55 0.25 264);
+    --chart-2: oklch(0.65 0.2 264);
+    --chart-3: oklch(0.75 0.15 264);
+    --chart-4: oklch(0.6 0.18 220);
+    --chart-5: oklch(0.5 0.22 280);
+    --sidebar: oklch(0.18 0.02 264);
+    --sidebar-foreground: oklch(0.98 0 0);
+    --sidebar-primary: oklch(0.55 0.25 264);
+    --sidebar-primary-foreground: oklch(0.98 0 0);
+    --sidebar-accent: oklch(0.3 0.08 264);
+    --sidebar-accent-foreground: oklch(0.85 0.15 264);
+    --sidebar-border: oklch(0.28 0.02 264);
+    --sidebar-ring: oklch(0.55 0.25 264);
+}
 
 @layer base {
     * {
         @apply border-border outline-ring/50;
     }
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground font-sans;
+        font-family: var(--font-family-sans);
     }
 }
