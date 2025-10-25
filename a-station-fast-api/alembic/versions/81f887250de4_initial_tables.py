@@ -1,8 +1,8 @@
-"""Initial tables
+"""Initial_tables
 
-Revision ID: 7d07dfb5b769
+Revision ID: 81f887250de4
 Revises: 
-Create Date: 2025-10-10 22:48:28.037735
+Create Date: 2025-10-25 19:42:02.688153
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '7d07dfb5b769'
+revision = '81f887250de4'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -29,6 +29,27 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
+    op.create_table('refresh_tokens',
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('token_hash', sa.String(length=64), nullable=False),
+    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('revoked', sa.Boolean(), nullable=False),
+    sa.Column('replaced_by_token_id', sa.UUID(), nullable=True),
+    sa.Column('family_id', sa.Uuid(), nullable=False),
+    sa.Column('device_info', sa.String(length=255), nullable=True),
+    sa.Column('ip_address', sa.String(length=45), nullable=True),
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['replaced_by_token_id'], ['refresh_tokens.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_refresh_tokens_expires_at'), 'refresh_tokens', ['expires_at'], unique=False)
+    op.create_index(op.f('ix_refresh_tokens_family_id'), 'refresh_tokens', ['family_id'], unique=False)
+    op.create_index(op.f('ix_refresh_tokens_revoked'), 'refresh_tokens', ['revoked'], unique=False)
+    op.create_index(op.f('ix_refresh_tokens_token_hash'), 'refresh_tokens', ['token_hash'], unique=True)
+    op.create_index(op.f('ix_refresh_tokens_user_id'), 'refresh_tokens', ['user_id'], unique=False)
     op.create_table('workspaces',
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('owner_id', sa.UUID(), nullable=False),
@@ -68,6 +89,14 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ),
     sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('workspace_members',
+    sa.Column('workspace_id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('role', sa.String(length=20), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['workspace_id'], ['workspaces.id'], ),
+    sa.PrimaryKeyConstraint('workspace_id', 'user_id')
     )
     op.create_table('hosts',
     sa.Column('alias', sa.String(length=100), nullable=False),
@@ -128,10 +157,17 @@ def downgrade() -> None:
     op.drop_table('jobs')
     op.drop_table('inventory_group_association')
     op.drop_table('hosts')
+    op.drop_table('workspace_members')
     op.drop_table('playbooks')
     op.drop_table('inventory_groups')
     op.drop_table('credentials')
     op.drop_table('workspaces')
+    op.drop_index(op.f('ix_refresh_tokens_user_id'), table_name='refresh_tokens')
+    op.drop_index(op.f('ix_refresh_tokens_token_hash'), table_name='refresh_tokens')
+    op.drop_index(op.f('ix_refresh_tokens_revoked'), table_name='refresh_tokens')
+    op.drop_index(op.f('ix_refresh_tokens_family_id'), table_name='refresh_tokens')
+    op.drop_index(op.f('ix_refresh_tokens_expires_at'), table_name='refresh_tokens')
+    op.drop_table('refresh_tokens')
     op.drop_index(op.f('ix_users_username'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
