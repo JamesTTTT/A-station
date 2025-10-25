@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.schemas.health import HealthResponse
@@ -23,9 +23,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(APIKeyMiddleware)
-app.include_router(router=auth_router)
-app.include_router(router=workspace_router)
 
+api_v1_router = APIRouter(prefix="/api/v1")
+api_v1_router.include_router(auth_router)
+api_v1_router.include_router(workspace_router)
+
+# v1 router
+app.include_router(api_v1_router)
 
 @app.get("/", response_model=HealthResponse)
 async def health():
