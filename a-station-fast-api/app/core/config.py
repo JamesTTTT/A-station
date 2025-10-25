@@ -12,8 +12,15 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     API_KEY_1: str =""
+
+    MAX_REFRESH_TOKENS_PER_USER: int = 5
+    ENABLE_TOKEN_ROTATION: bool = True
+    TOKEN_REUSE_DETECTION: bool = True
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    REFRESH_TOKEN_SECRET_KEY: str = ""
+    REFRESH_TOKEN_LENGTH: int = 32
 
     # Database
     DATABASE_URL: str = ""
