@@ -8,11 +8,13 @@ RUN apt-get update && apt-get install -y netcat-traditional && \
     rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ./app /app/app
+COPY ./app ./app
+COPY ./alembic /app/alembic
+COPY alembic.ini .
 
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
-EXPOSE 8000
+EXPOSE 80
 
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]
