@@ -16,6 +16,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             "/redoc",
             "/openapi.json",
         ]
+        self.root_path_exempt = "/"
 
     async def dispatch(self, request: Request, call_next):
         if self._is_path_exempt(request.url.path):
@@ -39,4 +40,10 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         return response
 
     def _is_path_exempt(self, path: str) -> bool:
-        return path in self.exempt_paths
+        if path == self.root_path_exempt:
+            return True
+
+        for exempt_path in self.exempt_paths:
+            if path.startswith(exempt_path):
+                return True
+        return False

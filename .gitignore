@@ -293,5 +293,6 @@ htmlcov/
 # Temporary files
 *.tmp
 
+./implementation-plans/
 
 .idea/

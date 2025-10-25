@@ -12,6 +12,8 @@ load_dotenv()
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.models.base import Base
+# Import all models so Alembic can detect them
+from app.models import *  # noqa
 
 config = context.config
 

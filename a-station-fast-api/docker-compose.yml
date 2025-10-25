@@ -1,19 +1,21 @@
 version: '3.8'
 
 services:
-#  web:
-#    build: .
-#    ports:
-#      - "8000:8000"
-#    depends_on:
-#      - db
-#    env_file:
-#      - .env
+  web:
+    build: .
+    ports:
+      - "8000:80"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
 
   db:
     image: postgres:17-alpine
     ports:
-      - 5432:5432
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:

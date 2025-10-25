@@ -41,4 +41,17 @@ class UserRead(TimestampedUUIDSchema):
 class TokenResponse(BaseModel):
     """Schema for JWT token response"""
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
+    expires_in: int = 900
+
+    model_config = {"json_schema_extra": {
+        "examples": [
+            {
+                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "refresh_token": "a1b2c3d4e5f6...",
+                "token_type": "bearer",
+                "expires_in": 900
+            }
+        ]
+    }}
