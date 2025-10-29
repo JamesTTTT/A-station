@@ -4,7 +4,7 @@ from starlette.responses import JSONResponse
 
 from app.utils import get_default_api_key_pattern, get_api_keys_in_env
 
-
+#TODO: IT DOESNT WORK
 class APIKeyMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, exempt_paths: list[str] | None = None):
         super().__init__(app)
