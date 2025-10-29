@@ -11,7 +11,8 @@ app = FastAPI(
 )
 
 origins = [
-    "http://localhost",
+    "http://localhost:5173",  # Vite default port
+    "http://localhost:3000",  # Common React port
     "http://localhost:8080",
 ]
 
