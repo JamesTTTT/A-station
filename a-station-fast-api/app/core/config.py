@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     REFRESH_TOKEN_SECRET_KEY: str = ""
     REFRESH_TOKEN_LENGTH: int = 32
+    COOKIE_SECURE: bool = True
 
     # Database
     DATABASE_URL: str = ""
