@@ -1,3 +1,4 @@
+from pydantic import EmailStr
 from sqlalchemy.orm import Session
 import uuid
 from typing import List, Optional
@@ -5,10 +6,7 @@ from typing import List, Optional
 from app.crud import workspace_crud, user_crud
 from app.schemas.workspace import WorkspaceCreate, WorkspaceUpdate
 from app.models.workspace import Workspace
-from app.models.user import User
 from app.models.workspace_member import WorkspaceMember
-from models import Workspace
-from models.workspace_member import WorkspaceMember
 
 
 class WorkspaceService:
@@ -18,10 +16,7 @@ class WorkspaceService:
 
 
     def get_workspace_by_id(self, workspace_id: uuid.UUID, user_id: uuid.UUID) -> Optional[Workspace]:
-        """
-        Get a single workspace by its ID.
-        Ensures that the user is a member of the workspace.
-        """
+
         if workspace_crud.is_workspace_member(self.db, workspace_id=workspace_id, user_id=user_id):
             return workspace_crud.get_workspace_with_members(self.db, workspace_id=workspace_id)
         return None
@@ -45,11 +40,8 @@ class WorkspaceService:
         return False
 
     def invite_member(
-        self, workspace_id: uuid.UUID, user_email: str, role: str, inviter_id: uuid.UUID
+        self, workspace_id: uuid.UUID, user_email: EmailStr, role: str, inviter_id: uuid.UUID
     ) -> Optional[WorkspaceMember]:
-        """
-        Only an ADMIN or higher can invite members.
-        """
         if not workspace_crud.user_has_permission(self.db, workspace_id, inviter_id, "ADMIN"):
             return None
 
@@ -62,9 +54,6 @@ class WorkspaceService:
         )
 
     def remove_member(self, workspace_id: uuid.UUID, user_id_to_remove: uuid.UUID, remover_id: uuid.UUID) -> bool:
-        """
-        Only an ADMIN or higher can remove members.
-        """
         if not workspace_crud.user_has_permission(self.db, workspace_id, remover_id, "ADMIN"):
             return False
 
@@ -77,9 +66,6 @@ class WorkspaceService:
     def update_member_role(
         self, workspace_id: uuid.UUID, user_id_to_update: uuid.UUID, new_role: str, updater_id: uuid.UUID
     ) -> Optional[WorkspaceMember]:
-        """
-        Only an ADMIN or OWNER can update roles.
-        """
         if not workspace_crud.user_has_permission(self.db, workspace_id, updater_id, "ADMIN"):
             return None
 
