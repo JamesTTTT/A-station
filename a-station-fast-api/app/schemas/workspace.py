@@ -9,6 +9,14 @@ class WorkspaceCreate(BaseModel):
     """Schema for creating a workspace"""
     name: str = Field(..., min_length=1, max_length=255)
 
+    model_config = {"json_schema_extra":{
+        "examples": [
+            {
+                "name": "My Workspace"
+            }
+        ]
+    }}
+
 
 class WorkspaceUpdate(BaseModel):
     """Schema for updating a workspace"""
