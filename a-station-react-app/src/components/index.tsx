@@ -6,3 +6,8 @@ export * from "./ui";
 
 export { LoginFields } from "./LoginFields";
 export { Navbar } from "./Navbar";
+export { FileTree } from "./FileTree";
+export { DashboardNavbar } from "./DashboardNavbar";
+export { Canvas } from "./Canvas";
+export { SecondaryToolbar } from "./SecondaryToolbar";
+export { Toolbar } from "./Toolbar";
