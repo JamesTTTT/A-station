@@ -5,6 +5,7 @@ from datetime import datetime
 from .base import TimestampedUUIDModel
 import uuid
 from .playbook import Playbook
+from .user import User
 
 class Job(TimestampedUUIDModel):
     __tablename__ = "jobs"
@@ -12,8 +13,17 @@ class Job(TimestampedUUIDModel):
     playbook_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("playbooks.id"))
     triggered_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
 
-    status: Mapped[str] = mapped_column(String(20), default="PENDING")
+    status: Mapped[str] = mapped_column(String(20))
     log_output: Mapped[Optional[str]] = mapped_column(Text)
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     playbook: Mapped["Playbook"] = relationship("Playbook", back_populates="jobs")
+
+    created_by: Mapped["User"] = relationship("User", foreign_keys=[triggered_by_id])
+    ansible_version: Mapped[str] = mapped_column(String(10))
+
+class JobStatus:
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
