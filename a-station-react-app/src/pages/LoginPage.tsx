@@ -19,7 +19,7 @@ export const LoginPage = () => {
     if (res.success) {
       console.log("Logged in");
       await navigate({
-        to: "/dashboard",
+        to: "/workspaces/select",
         replace: true,
       });
     } else {

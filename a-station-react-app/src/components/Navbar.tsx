@@ -39,7 +39,7 @@ export const Navbar = ({ isAuth }: { isAuth: boolean }) => {
         </NavigationMenuList>
       </NavigationMenu>
       {isAuth ? (
-        <Button onClick={() => navigate({ to: "/dashboard" })}>
+        <Button onClick={() => navigate({ to: "/workspaces/select" })}>
           Dashboard
         </Button>
       ) : (

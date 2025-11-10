@@ -12,6 +12,7 @@ import {
   NotFoundPage,
   Dashboard,
   Home,
+  WorkspaceSelect,
 } from "@/pages/index.tsx";
 import type { AuthContextType } from "@/contexts/AuthContext.tsx";
 
@@ -54,6 +55,17 @@ const registerRoute = createRoute({
   component: () => <RegisterPage />,
 });
 
+const workspaceSelectRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/workspaces/select",
+  component: () => <WorkspaceSelect />,
+  beforeLoad: ({ context }) => {
+    if (!context.auth?.authState.isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard",
@@ -69,6 +81,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   registerRoute,
+  workspaceSelectRoute,
   dashboardRoute,
 ]);
 
