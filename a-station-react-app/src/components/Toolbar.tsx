@@ -1,7 +1,6 @@
 import { GalleryVerticalEnd, ListFilterPlus, Plus } from "lucide-react";
 import { Button } from "@/components/ui";
 
-type Props = {};
 export const Toolbar = () => {
   return (
     <div className="flex flex-col items-center w-16 h-full bg-card border-r border-border">

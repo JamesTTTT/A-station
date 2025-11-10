@@ -30,3 +30,16 @@ export {
   NavigationMenuViewport,
   navigationMenuTriggerStyle,
 } from "./navigation-menu";
+
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+} from "./dialog";
