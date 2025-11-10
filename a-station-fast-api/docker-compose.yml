@@ -23,15 +23,14 @@ services:
       - POSTGRES_PASSWORD=astation_password123
       - POSTGRES_DB=mydatabase
 
-#  celery:
-#    build: .
-#    command: celery -A app.celery_worker.celery worker --loglevel=info
-#    depends_on:
-#      - db
-#      - redis
-#
-#  redis:
-#    image: "redis:alpine"
+  redis:
+    image: valkey/valkey:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: valkey-server --appendonly yes
 
 volumes:
   postgres_data:
+  redis_data:
