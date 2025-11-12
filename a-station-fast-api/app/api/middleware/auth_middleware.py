@@ -2,7 +2,7 @@ from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from app.utils import get_default_api_key_pattern, get_api_keys_in_env
+from app.utils.api_key import get_default_api_key_pattern, get_api_keys_in_env
 
 #TODO: IT DOESNT WORK
 class APIKeyMiddleware(BaseHTTPMiddleware):
