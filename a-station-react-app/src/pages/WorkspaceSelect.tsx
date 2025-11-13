@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { getWorkspaces, getWorkspaceById } from "@/api/workspace-api";
 import type { Workspace, WorkspaceWithMembers } from "@/types/workspace";
 import {
   Card,
@@ -18,52 +17,11 @@ import { Plus } from "lucide-react";
 export const WorkspaceSelect = () => {
   const { authState } = useAuth();
   const navigate = useNavigate({ from: "/workspaces/select" });
-  const { setSelectedWorkspace } = useWorkspaceStore();
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const { setSelectedWorkspace, fetchWorkspaces, workspaces, loading, error } =
+    useWorkspaceStore();
   const [workspaceDetails, setWorkspaceDetails] = useState<
     Map<string, WorkspaceWithMembers>
   >(new Map());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Extract fetchWorkspaces so it can be reused after creating a workspace
-  const fetchWorkspaces = useCallback(async () => {
-    if (!authState.token) {
-      setError("Not authenticated");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const result = await getWorkspaces(authState.token);
-      if (result.success) {
-        setWorkspaces(result.data);
-
-        // Fetch detailed info for each workspace to get members
-        const detailsMap = new Map<string, WorkspaceWithMembers>();
-        for (const workspace of result.data) {
-          const detailResult = await getWorkspaceById(
-            workspace.id,
-            authState.token,
-          );
-          if (detailResult.success) {
-            detailsMap.set(workspace.id, detailResult.data);
-          }
-        }
-        setWorkspaceDetails(detailsMap);
-      } else {
-        setError(result.error?.message || "Failed to load workspaces");
-      }
-    } catch (err) {
-      setError("An unexpected error occurred");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [authState.token]);
 
   useEffect(() => {
     fetchWorkspaces();

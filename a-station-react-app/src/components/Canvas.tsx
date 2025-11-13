@@ -12,7 +12,7 @@ import { Button } from "@/components/ui";
 export const Canvas = () => {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect } =
     useCanvasStore();
-
+  const proOptions = { hideAttribution: true };
   return (
     <div className="flex-1 h-full bg-muted/70 overflow-auto relative">
       {/* Canvas Header/Toolbar */}
@@ -28,6 +28,7 @@ export const Canvas = () => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        proOptions={proOptions}
         fitView
         className="bg-muted/70"
       >

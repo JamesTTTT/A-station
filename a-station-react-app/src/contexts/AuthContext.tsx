@@ -18,6 +18,7 @@ import {
   type AuthResponse,
   type UserResponse,
 } from "@/types/auth";
+import { useAuthStore } from "@/stores/authStore";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -35,9 +36,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
-    token: null,
+  const { setToken, clearToken } = useAuthStore();
+  const [authState, setAuthState] = useState<AuthState>(() => {
+    const storedToken = useAuthStore.getState().token;
+    return {
+      isAuthenticated: !!storedToken,
+      token: storedToken,
+    };
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -48,9 +53,12 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
   const handleLogin = async (credentials: LoginRequest) => {
     const result = await login(credentials);
     if (result.success) {
+      const token = result.data.access_token;
+      // Sync with authStore
+      setToken(token);
       setAuthState({
         isAuthenticated: true,
-        token: result.data.access_token,
+        token,
       });
     }
     return result;
@@ -70,6 +78,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (authState.token) {
       await logoutApi(authState.token);
     }
+    clearToken();
     setAuthState({
       isAuthenticated: false,
       token: null,
@@ -79,11 +88,14 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
   const handleRefresh = async () => {
     const result = await refreshToken();
     if (result.success) {
+      const token = result.data.access_token;
+      setToken(token);
       setAuthState({
         isAuthenticated: true,
-        token: result.data.access_token,
+        token,
       });
     } else {
+      clearToken();
       setAuthState({
         isAuthenticated: false,
         token: null,
