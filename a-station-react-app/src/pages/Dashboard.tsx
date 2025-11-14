@@ -14,13 +14,11 @@ export const Dashboard = () => {
   const { selectedWorkspace } = useWorkspaceStore();
 
   useEffect(() => {
-    // Redirect to workspace selection if no workspace is selected
     if (!selectedWorkspace) {
       navigate({ to: "/workspaces/select", replace: true });
     }
   }, [selectedWorkspace, navigate]);
 
-  // Show loading while redirecting
   if (!selectedWorkspace) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">

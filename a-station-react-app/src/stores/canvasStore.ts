@@ -1,78 +1,144 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import {
   type Node,
   type Edge,
-  addEdge,
   applyNodeChanges,
   applyEdgeChanges,
 } from "@xyflow/react";
 import type { OnNodesChange, OnEdgesChange, OnConnect } from "@xyflow/react";
+import type { TaskNodeData, ExecutionState } from "@/types/nodes";
+import { playbookParser } from "@/services/yaml-parser";
 
 interface CanvasStore {
-  nodes: Node[];
+  // State
+  nodes: Node<TaskNodeData>[];
   edges: Edge[];
+
+  // React Flow handlers
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
-  addNode: (node: Node) => void;
-  removeNode: (id: string) => void;
-  setNodes: (nodes: Node[]) => void;
-  setEdges: (edges: Edge[]) => void;
+
+  // Playbook loading
+  loadFromYAML: (yamlContent: string) => void;
+
+  // Execution state management
+  updateTaskState: (taskId: string, state: ExecutionState) => void;
+  updateTaskStateByName: (taskName: string, state: ExecutionState) => void;
+  resetAllTaskStates: () => void;
+
+  // Canvas management
+  clearCanvas: () => void;
 }
 
-export const useCanvasStore = create<CanvasStore>((set, get) => ({
-  nodes: [
+export const useCanvasStore = create<CanvasStore>()(
+  persist(
+    (set, get) => ({
+      nodes: [],
+      edges: [],
+
+      onNodesChange: (changes) => {
+        set({
+          nodes: applyNodeChanges(changes, get().nodes) as Node<TaskNodeData>[],
+        });
+      },
+
+      onEdgesChange: (changes) => {
+        set({
+          edges: applyEdgeChanges(changes, get().edges),
+        });
+      },
+
+      onConnect: (connection) => {
+        set({
+          edges: [...get().edges, { ...connection, id: `edge-${Date.now()}` }],
+        });
+      },
+
+      loadFromYAML: (yamlContent) => {
+        const result = playbookParser.parse(yamlContent);
+
+        if (!result.success) {
+          console.error("Failed to parse YAML:", result.error);
+          set({ nodes: [], edges: [] });
+          return;
+        }
+
+        const nodes: Node<TaskNodeData>[] = result.tasks.map((task, index) => ({
+          id: task.id,
+          type: "simpleTask",
+          position: {
+            x: 300,
+            y: 100 + index * 120,
+          },
+          data: {
+            taskId: task.id,
+            name: task.name,
+            module: task.module,
+            state: "idle",
+            playName: task.playName,
+          },
+        }));
+
+        const edges: Edge[] = [];
+        for (let i = 0; i < result.tasks.length - 1; i++) {
+          edges.push({
+            id: `edge-${i}`,
+            source: result.tasks[i].id,
+            target: result.tasks[i + 1].id,
+            type: "smoothstep",
+            animated: false,
+          });
+        }
+
+        set({ nodes, edges });
+      },
+
+      updateTaskState: (taskId, state) => {
+        set({
+          nodes: get().nodes.map((node) =>
+            node.id === taskId
+              ? { ...node, data: { ...node.data, state } }
+              : node,
+          ),
+        });
+      },
+      updateTaskStateByName: (taskName, state) => {
+        set({
+          nodes: get().nodes.map((node) =>
+            node.data.name === taskName
+              ? { ...node, data: { ...node.data, state } }
+              : node,
+          ),
+        });
+      },
+
+      resetAllTaskStates: () => {
+        set({
+          nodes: get().nodes.map((node) => ({
+            ...node,
+            data: { ...node.data, state: "idle" },
+          })),
+        });
+      },
+
+      clearCanvas: () => {
+        set({
+          nodes: [],
+          edges: [],
+        });
+      },
+    }),
     {
-      id: "1",
-      type: "input",
-      data: { label: "Start Node" },
-      position: { x: 250, y: 100 },
+      name: "canvas-storage",
+      partialize: (state) => ({
+        nodes: state.nodes.map((node) => ({
+          ...node,
+          data: { ...node.data, state: "idle" },
+        })),
+        edges: state.edges,
+      }),
     },
-    {
-      id: "2",
-      data: { label: "Task Node" },
-      position: { x: 250, y: 250 },
-    },
-  ],
-  edges: [
-    {
-      id: "e1-2",
-      source: "1",
-      target: "2",
-    },
-  ],
-
-  onNodesChange: (changes) => {
-    set({
-      nodes: applyNodeChanges(changes, get().nodes),
-    });
-  },
-
-  onEdgesChange: (changes) => {
-    set({
-      edges: applyEdgeChanges(changes, get().edges),
-    });
-  },
-
-  onConnect: (connection) => {
-    set({
-      edges: addEdge(connection, get().edges),
-    });
-  },
-
-  addNode: (node) => {
-    set({ nodes: [...get().nodes, node] });
-  },
-
-  removeNode: (id) => {
-    set({
-      nodes: get().nodes.filter((node) => node.id !== id),
-      edges: get().edges.filter(
-        (edge) => edge.source !== id && edge.target !== id,
-      ),
-    });
-  },
-
-  setNodes: (nodes) => set({ nodes }),
-  setEdges: (edges) => set({ edges }),
-}));
+  ),
+);

@@ -34,6 +34,9 @@ export const DashboardNavbar = () => {
             <User />
           </span>
         </Button>
+        <Button className="flex items-center justify-center rounded-lg bg-muted hover:bg-accent transition-colors">
+          <span className="text-muted-foreground text-sm">Upgrade</span>
+        </Button>
       </div>
     </div>
   );
