@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
+
+from api.endpoints.playbooks import get_playbook
 from app.celery_app.client import celery_app
 from app.models.job import Job, JobStatus
 from app.schemas.job import JobCreate, JobResponse
@@ -23,8 +25,8 @@ async def run_job(
 
     queue_name = f"ansible_{job.ansible_version.replace('.', '_')}"
 
-    # TODO: Create a fetch for playbook in crud
-    pb = db.query(Playbook).filter(Playbook.id == job.playbook_id).first()
+    pb = get_playbook(db=db, playbook_id=job.playbook_id)
+
     if not pb:
         raise HTTPException(status_code=404, detail="Playbook not found")
 
