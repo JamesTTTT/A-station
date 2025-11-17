@@ -10,7 +10,7 @@ export const SecondaryToolbar = () => {
   const yamlContent = selectedPlaybook?.yaml_content ?? "";
 
   return (
-    <div className="flex flex-col w-80 h-full bg-card border-l border-border">
+    <div className="flex flex-col w-96 h-full bg-card border-l border-border">
       {/* Tab Headers */}
       <div className="flex items-center border-b border-border">
         <button
@@ -46,7 +46,7 @@ export const SecondaryToolbar = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-4 h-full">
+      <div className="flex-1 overflow-y-auto h-full">
         {activeTab === "logs" && (
           <div className="flex flex-col gap-2">
             <div className="text-xs font-mono text-muted-foreground p-2 rounded bg-muted/50">
