@@ -3,7 +3,7 @@ import type { NodeProps } from "@xyflow/react";
 import type { TaskNodeData } from "@/types/nodes";
 import { cn } from "@/lib/utils";
 
-export function SimpleTaskNode({ data, selected }: NodeProps<TaskNodeData>) {
+export const SimpleTaskNode = ({ data, selected }: NodeProps<TaskNodeData>) => {
   // State-based styling
   const getStateStyles = () => {
     switch (data.state) {

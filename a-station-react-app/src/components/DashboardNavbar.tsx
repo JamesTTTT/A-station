@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { Button } from "@/components/ui";
 import { Settings2, User } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 export const DashboardNavbar = () => {
   const { selectedWorkspace } = useWorkspaceStore();
@@ -24,6 +25,7 @@ export const DashboardNavbar = () => {
         )}
       </div>
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <Button className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted hover:bg-accent transition-colors">
           <span className="text-muted-foreground text-sm">
             <Settings2 />

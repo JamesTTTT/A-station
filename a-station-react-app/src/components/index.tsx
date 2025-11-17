@@ -12,3 +12,4 @@ export { Canvas } from "./Canvas/Canvas.tsx";
 export { SecondaryToolbar } from "./SecondaryToolbar";
 export { Toolbar } from "./Toolbar";
 export { YamlCodeViewer } from "./YamlCodeViewer";
+export { ThemeToggle } from "./ThemeToggle";

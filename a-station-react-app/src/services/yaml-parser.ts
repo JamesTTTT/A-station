@@ -1,103 +1,166 @@
 import yaml from "js-yaml";
-import type { PlaybookTask, ParseResult } from "@/types/nodes";
+import type {PlaybookTask, ParseResult, HeadNode} from "@/types/nodes";
 
 export class PlaybookParser {
-  public parse(yamlContent: string): ParseResult {
+  // Public method for backward compatibility (single playbook)
+  public parse(
+    yamlContent: string,
+    playbookFile: string = "playbook.yml",
+    playbookId: string = "default"
+  ): ParseResult {
+    return this.parseSingle(yamlContent, playbookFile, playbookId, 0);
+  }
+
+  private parseSingle(
+    yamlContent: string,
+    playbookFile: string,
+    playbookId: string,
+    startingOrder: number
+  ): ParseResult {
     if (!yamlContent || yamlContent.trim() === "") {
-      return {
-        success: true,
-        tasks: [],
-      };
+      return {success: true, headNodes: [], tasks: []};
     }
 
     try {
       const parsed = yaml.load(yamlContent) as any;
+
       if (!Array.isArray(parsed)) {
         return {
           success: false,
+          headNodes: [],
           tasks: [],
           error: "Playbook must be a list of plays",
         };
       }
 
+      const headNodes: HeadNode[] = [];
       const tasks: PlaybookTask[] = [];
-      let globalOrder = 0;
+      let globalOrder = startingOrder;
 
-      for (const play of parsed) {
-        const playName = play.name || "Unnamed Play";
-        if (play.tasks && Array.isArray(play.tasks)) {
-          for (const task of play.tasks) {
-            const extracted = this.extractTask(task, globalOrder, playName);
-            if (extracted) {
-              tasks.push(extracted);
-              globalOrder++;
-            }
-          }
-        }
-        if (play.handlers && Array.isArray(play.handlers)) {
-          for (const handler of play.handlers) {
-            const extracted = this.extractTask(
-              handler,
-              globalOrder,
-              `${playName} (Handlers)`,
-            );
-            if (extracted) {
-              tasks.push(extracted);
-              globalOrder++;
-            }
-          }
-        }
-        if (play.pre_tasks && Array.isArray(play.pre_tasks)) {
-          for (const preTask of play.pre_tasks) {
-            const extracted = this.extractTask(
-              preTask,
-              globalOrder,
-              `${playName} (Pre-tasks)`,
-            );
-            if (extracted) {
-              tasks.push(extracted);
-              globalOrder++;
-            }
-          }
-        }
-        if (play.post_tasks && Array.isArray(play.post_tasks)) {
-          for (const postTask of play.post_tasks) {
-            const extracted = this.extractTask(
-              postTask,
-              globalOrder,
-              `${playName} (Post-tasks)`,
-            );
-            if (extracted) {
-              tasks.push(extracted);
-              globalOrder++;
-            }
-          }
-        }
+      for (let playIndex = 0; playIndex < parsed.length; playIndex++) {
+        const play = parsed[playIndex];
+
+        // Create HeadNode for this play
+        const headNodeId = `head-${playbookId}-play${playIndex}`;
+        const headNode: HeadNode = {
+          id: headNodeId,
+          playbookId,
+          playbookFile,
+          playName: play.name || "Unnamed Play",
+          order: globalOrder,
+          hosts: play.hosts,
+          become: play.become,
+          becomeUser: play.become_user,
+          vars: play.vars,
+          tags: play.tags,
+          gather_facts: play.gather_facts,
+        };
+
+        headNodes.push(headNode);
+        globalOrder++;
+
+        // Extract tasks for this play
+        const playTasks = this.extractPlayTasks(
+          play,
+          playbookId,
+          playbookFile,
+          headNodeId,
+          play.name || "Unnamed Play",
+          globalOrder
+        );
+
+        tasks.push(...playTasks);
+        globalOrder += playTasks.length;
       }
 
       return {
         success: true,
+        headNodes,
         tasks,
       };
     } catch (error) {
       return {
         success: false,
+        headNodes: [],
         tasks: [],
         error: error instanceof Error ? error.message : "Failed to parse YAML",
       };
     }
   }
 
+  public parseMultiple(
+    playbooks: Array<{ content: string; filename: string; id: string }>
+  ): ParseResult {
+    const allHeadNodes: HeadNode[] = [];
+    const allTasks: PlaybookTask[] = [];
+    let globalOrder = 0;
+
+    for (const playbook of playbooks) {
+      const result = this.parseSingle(
+        playbook.content,
+        playbook.filename,
+        playbook.id,
+        globalOrder
+      );
+
+      if (!result.success) {
+        return result; // Early return on error
+      }
+
+      allHeadNodes.push(...result.headNodes);
+      allTasks.push(...result.tasks);
+      globalOrder = allTasks.length; // Update global order
+    }
+
+    return {
+      success: true,
+      headNodes: allHeadNodes,
+      tasks: allTasks,
+    };
+  }
+
+  private extractPlayTasks(
+    play: any,
+    playbookId: string,
+    playbookFile: string,
+    parentHeadNodeId: string,
+    playName: string,
+    startingOrder: number
+  ): PlaybookTask[] {
+    const tasks: PlaybookTask[] = [];
+    let order = startingOrder;
+
+    if (play.tasks && Array.isArray(play.tasks)) {
+      for (const task of play.tasks) {
+        const extracted = this.extractTask(
+          task,
+          order,
+          playName,
+          playbookId,
+          playbookFile,
+          parentHeadNodeId
+        );
+        if (extracted) {
+          tasks.push(extracted);
+          order++;
+        }
+      }
+    }
+
+    return tasks;
+  }
+
   private extractTask(
     task: any,
     order: number,
     playName: string,
+    playbookId: string,
+    playbookFile: string,
+    parentHeadNodeId: string
   ): PlaybookTask | null {
     try {
       const taskName = task.name || this.deriveTaskName(task);
-
       const module = this.extractModule(task);
-
       const id = `task-${order}`;
 
       return {
@@ -106,6 +169,9 @@ export class PlaybookParser {
         module,
         order,
         playName,
+        playbookId,
+        playbookFile,
+        parentHeadNodeId,
       };
     } catch (error) {
       console.warn("Failed to parse task:", error);
