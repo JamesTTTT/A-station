@@ -13,7 +13,7 @@ import { nodeTypes } from "@/components/Canvas/nodeTypes";
 
 import { Button } from "@/components/ui";
 import { useEffect } from "react";
-import {Play} from "lucide-react";
+import { Play } from "lucide-react";
 
 export const Canvas = () => {
   const {
@@ -72,11 +72,19 @@ export const Canvas = () => {
         </Panel>
 
         {selectedPlaybook && (
-          <Panel position="top-right" className={'min-w-38'}>
-            <div className="bg-background/90 backdrop-blur px-3 py-2 rounded-lg border text-sm">
-              <div className="font-semibold">{selectedPlaybook.name}</div>
+          <Panel position="top-right" className={"min-w-38"}>
+            <div className="bg-background/90 backdrop-blur px-3 py-2 rounded-lg border text-sm flex justify-between align-middle items-center">
+              <div>
+                <div className="font-semibold">{selectedPlaybook.name}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                {nodes.length} tasks
+                  {nodes.length} tasks
+                </div>
+              </div>
+
+              <div>
+                <Button onClick={() => {}}>
+                  <Play />
+                </Button>
               </div>
             </div>
           </Panel>

@@ -1,0 +1,47 @@
+# Commit Message Template
+#
+# FOR SMALL CHANGES (use single line):
+# Brief description of what changed
+#
+# FOR LARGER CHANGES (use this format):
+# Brief summary header (imperative mood, no period)
+#
+# - First change made
+# - Second change made
+# - Third change made
+#
+# Type: <type>
+#
+# ─────────────────────────────────────────────────────────────
+# Types:
+#   feat      - New feature
+#   fix       - Bug fix
+#   refactor  - Code refactoring (no functionality change)
+#   change    - Behavior/functionality change
+#   docs      - Documentation only
+#   style     - Formatting, whitespace, etc.
+#   test      - Adding or updating tests
+#   chore     - Maintenance, dependencies, tooling
+#   perf      - Performance improvement
+# ─────────────────────────────────────────────────────────────
+# Examples:
+#
+# Small change:
+#   Fix typo in login validation message
+#
+# Large change:
+#   Refactor authentication system
+#
+#   - Migrate from JWT to session-based auth
+#   - Update user model with session fields
+#   - Add middleware for session management
+#   - Update tests for new auth flow
+#
+#   Type: refactor
+# ─────────────────────────────────────────────────────────────
+# Tips:
+# - Use imperative mood ("Add feature" not "Added feature")
+# - Keep header under 72 characters
+# - Be specific about what changed and why
+# - Reference issue numbers when applicable
+# ─────────────────────────────────────────────────────────────

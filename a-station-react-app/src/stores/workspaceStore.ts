@@ -2,16 +2,14 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Workspace } from "@/types/workspace";
 import { getWorkspaces } from "@/api/workspace-api";
-import { useAuthStore } from "./authStore";
 
 interface WorkspaceStore {
   workspaces: Workspace[];
   selectedWorkspace: Workspace | null;
-
   loading: boolean;
   error: string | null;
 
-  fetchWorkspaces: () => Promise<void>;
+  fetchWorkspaces: (authToken: string) => Promise<void>; // CHANGED
   setSelectedWorkspace: (workspace: Workspace) => void;
   clearSelectedWorkspace: () => void;
 }
@@ -24,9 +22,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       loading: false,
       error: null,
 
-      fetchWorkspaces: async () => {
-        const authToken = useAuthStore.getState().token;
-
+      fetchWorkspaces: async (authToken: string) => {
         if (!authToken) {
           set({ error: "No auth token available" });
           return;

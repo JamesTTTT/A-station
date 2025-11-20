@@ -3,19 +3,24 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./routes";
 import "./index.css";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { useThemeInit } from "@/hooks/useThemeInit";
+import { useAuthInit } from "@/hooks/useAuthInit";
 
 function App() {
-  const auth = useAuth();
-  useThemeInit();
-  return <RouterProvider router={router} context={{ auth }} />;
+  const { isInitialized } = useAuthInit();
+
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Loading...
+      </div>
+    );
+  }
+
+  return <RouterProvider router={router} />;
 }
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <App />
   </StrictMode>,
 );

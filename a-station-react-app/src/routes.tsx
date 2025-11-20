@@ -1,5 +1,5 @@
 import {
-  createRootRouteWithContext,
+  createRootRoute,
   createRoute,
   createRouter,
   redirect,
@@ -14,13 +14,9 @@ import {
   Home,
   WorkspaceSelect,
 } from "@/pages/index.tsx";
-import type { AuthContextType } from "@/contexts/AuthContext.tsx";
+import { useAuthStore } from "@/stores/authStore";
 
-interface MyRouterContext {
-  auth: AuthContextType;
-}
-
-const rootRoute = createRootRouteWithContext<MyRouterContext>()({
+const rootRoute = createRootRoute({
   component: () => <Outlet />,
 
   notFoundComponent: NotFoundPage,
@@ -59,8 +55,9 @@ const workspaceSelectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/workspaces/select",
   component: () => <WorkspaceSelect />,
-  beforeLoad: ({ context }) => {
-    if (!context.auth?.authState.isAuthenticated) {
+  beforeLoad: () => {
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    if (!isAuthenticated) {
       throw redirect({ to: "/login" });
     }
   },
@@ -70,8 +67,9 @@ const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard",
   component: () => <Dashboard />,
-  beforeLoad: ({ context }) => {
-    if (!context.auth?.authState.isAuthenticated) {
+  beforeLoad: () => {
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    if (!isAuthenticated) {
       throw redirect({ to: "/login" });
     }
   },
@@ -87,9 +85,6 @@ const routeTree = rootRoute.addChildren([
 
 export const router = createRouter({
   routeTree,
-  context: {
-    auth: undefined!,
-  },
 });
 
 declare module "@tanstack/react-router" {

@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { createPlaybook } from "@/api/playbook-api";
 
 interface CreatePlaybookProps {
@@ -26,7 +26,7 @@ export const CreatePlaybook = ({
   onSuccess,
   trigger,
 }: CreatePlaybookProps) => {
-  const { authState } = useAuth();
+  const token = useAuthStore((state) => state.token);
   const [open, setOpen] = useState(false);
   const [playbookName, setPlaybookName] = useState("");
   const [yamlContent, setYamlContent] = useState("");
@@ -46,7 +46,7 @@ export const CreatePlaybook = ({
       return;
     }
 
-    if (!authState.token) {
+    if (!token) {
       setError("Not authenticated");
       return;
     }
@@ -61,7 +61,7 @@ export const CreatePlaybook = ({
           name: playbookName.trim(),
           yaml_content: yamlContent.trim(),
         },
-        authState.token
+        token
       );
 
       if (result.success) {
