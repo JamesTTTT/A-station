@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import type { Workspace, WorkspaceWithMembers } from "@/types/workspace";
 import {
@@ -15,7 +15,8 @@ import { Button } from "@/components";
 import { Plus } from "lucide-react";
 
 export const WorkspaceSelect = () => {
-  const { authState } = useAuth();
+  const token = useAuthStore((state) => state.token);
+
   const navigate = useNavigate({ from: "/workspaces/select" });
   const { setSelectedWorkspace, fetchWorkspaces, workspaces, loading, error } =
     useWorkspaceStore();
@@ -88,7 +89,7 @@ export const WorkspaceSelect = () => {
             {workspaces.map((workspace) => {
               const details = workspaceDetails.get(workspace.id);
               const memberCount = details?.members.length || 0;
-              const isOwner = details?.owner_id === authState.token;
+              const isOwner = details?.owner_id === token;
 
               return (
                 <Card

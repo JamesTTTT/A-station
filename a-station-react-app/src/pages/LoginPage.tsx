@@ -1,10 +1,10 @@
 import { LoginFields } from "@/components";
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext.tsx";
 import { useNavigate } from "@tanstack/react-router";
+import { useAuthStore } from "@/stores/authStore.ts";
 
 export const LoginPage = () => {
-  const { login } = useAuth();
+  const login = useAuthStore((state) => state.login);
   const navigate = useNavigate({ from: "/login" });
 
   const [loginFormData, setLoginFormData] = useState({
