@@ -20,13 +20,16 @@ export const WorkspaceSelect = () => {
   const navigate = useNavigate({ from: "/workspaces/select" });
   const { setSelectedWorkspace, fetchWorkspaces, workspaces, loading, error } =
     useWorkspaceStore();
+
   const [workspaceDetails, setWorkspaceDetails] = useState<
     Map<string, WorkspaceWithMembers>
   >(new Map());
 
   useEffect(() => {
-    fetchWorkspaces();
-  }, [fetchWorkspaces]);
+    if (token) {
+      fetchWorkspaces(token);
+    }
+  }, [fetchWorkspaces, token]);
 
   const handleSelectWorkspace = (workspace: Workspace) => {
     setSelectedWorkspace(workspace);

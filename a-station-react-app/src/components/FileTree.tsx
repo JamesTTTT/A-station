@@ -3,6 +3,7 @@ import { CreatePlaybook } from "./Modals/CreatePlaybook";
 import { Button } from "@/components/ui";
 import { usePlaybookStore } from "@/stores/playbookStore.ts";
 import { LucideNotepadText } from "lucide-react";
+import { useAuthStore } from "@/stores/authStore.ts";
 import { useEffect } from "react";
 
 export const FileTree = () => {
@@ -10,8 +11,11 @@ export const FileTree = () => {
   const { playbooks, fetchPlaybooks, selectPlaybook, error, loading } =
     usePlaybookStore();
 
+  const token = useAuthStore((state) => state.token);
+
   useEffect(() => {
-    fetchPlaybooks();
+    if (!selectedWorkspace || !token) return;
+    fetchPlaybooks(selectedWorkspace?.id, token);
   }, [fetchPlaybooks]);
 
   if (!selectedWorkspace) {
@@ -51,7 +55,7 @@ export const FileTree = () => {
       </div>
 
       {/* Tree Content */}
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-1">
           {playbooks.length === 0 ? (
             <p className={"text-sm"}>Playbooks empty...</p>
@@ -63,7 +67,7 @@ export const FileTree = () => {
                     selectPlaybook(playbook.id);
                   }}
                   key={playbook.id}
-                  className="flex w-full items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer"
+                  className="flex w-full items-center gap-2 px-2 py-1.5 hover:bg-accent cursor-pointer"
                 >
                   <span className="text-muted-foreground text-xs">
                     <LucideNotepadText />
