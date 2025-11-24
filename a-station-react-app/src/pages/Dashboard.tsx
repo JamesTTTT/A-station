@@ -28,9 +28,9 @@ export const Dashboard = () => {
   }
 
   return (
-    <main className={"flex flex-col w-screen h-screen  -mx-auto"}>
+    <main className={"flex flex-col w-screen h-screen -mx-auto"}>
       <DashboardNavbar />
-      <div className={"flex flex-row justify-between h-full"}>
+      <div className={"overflow-hidden flex flex-row justify-between flex-1"}>
         <Toolbar />
         <FileTree />
         <Canvas />

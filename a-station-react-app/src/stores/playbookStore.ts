@@ -1,7 +1,11 @@
 import type { PlaybookRead } from "@/types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { updatePlaybook, getPlaybooks, deletePlaybook } from "@/api/playbook-api";
+import {
+  updatePlaybook,
+  getPlaybooks,
+  deletePlaybook,
+} from "@/api/playbook-api";
 
 interface PlaybookStore {
   playbooks: PlaybookRead[];
@@ -13,7 +17,7 @@ interface PlaybookStore {
   saveError: string | null;
   lastSaved: Date | null;
 
-  fetchPlaybooks: (workspaceId: string, authToken: string) => Promise<void>; // CHANGED
+  fetchPlaybooks: (workspaceId: string, authToken: string) => Promise<void>;
   selectPlaybook: (id: string) => void;
   clearSelection: () => void;
   updateDraft: (yamlContent: string) => void;
@@ -144,7 +148,11 @@ export const usePlaybookStore = create<PlaybookStore>()(
         authToken: string,
       ) => {
         try {
-          const result = await deletePlaybook(workspaceId, playbookId, authToken);
+          const result = await deletePlaybook(
+            workspaceId,
+            playbookId,
+            authToken,
+          );
 
           if (result.success) {
             const state = get();

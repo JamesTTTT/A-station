@@ -15,8 +15,8 @@ export const FileTree = () => {
 
   useEffect(() => {
     if (!selectedWorkspace || !token) return;
-    fetchPlaybooks(selectedWorkspace?.id, token);
-  }, [fetchPlaybooks]);
+    fetchPlaybooks(selectedWorkspace.id, token);
+  }, [selectedWorkspace?.id, token, fetchPlaybooks]);
 
   if (!selectedWorkspace) {
     return null;
@@ -44,7 +44,7 @@ export const FileTree = () => {
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <h2 className="text-sm font-semibold text-foreground">Playbooks</h2>
         <CreatePlaybook
-          onSuccess={fetchPlaybooks}
+          onSuccess={() => fetchPlaybooks(selectedWorkspace.id, token!)}
           workspaceId={selectedWorkspace.id}
           trigger={
             <Button className="flex items-center justify-center w-6 h-6 rounded bg-transparent hover:bg-accent transition-colors">

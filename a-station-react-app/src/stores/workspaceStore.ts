@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Workspace } from "@/types/workspace";
 import { getWorkspaces } from "@/api/workspace-api";
+import { usePlaybookStore } from "./playbookStore";
+import { useCanvasStore } from "@/stores/canvasStore.ts";
 
 interface WorkspaceStore {
   workspaces: Workspace[];
@@ -53,6 +55,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       },
 
       setSelectedWorkspace: (workspace: Workspace) => {
+        usePlaybookStore.getState().clearSelection();
+        useCanvasStore.getState().clearCanvas();
         set({ selectedWorkspace: workspace });
       },
 
