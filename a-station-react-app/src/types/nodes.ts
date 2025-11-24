@@ -42,6 +42,7 @@ export interface HeadNodeData {
   playbookFile: string;
   playbookId: string;
   order: number;
+  state: ExecutionState;
 
   hosts?: string | string[];
   become?: boolean;
