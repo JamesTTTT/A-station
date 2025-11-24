@@ -1,6 +1,5 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.websockets.manager import manager
-from app.api.deps import get_current_user_ws
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,7 +10,7 @@ router = APIRouter()
 async def websocket_job_logs(
     websocket: WebSocket,
     job_id: str,
-    # user = Depends(get_current_user_ws)  # TODO: Add auth
+    token: str = None  # TODO: Validate token from query param
 ):
     """
     WebSocket endpoint for real-time job event streaming.
@@ -25,11 +24,8 @@ async def websocket_job_logs(
     await manager.connect(websocket, job_id)
 
     try:
-        # Keep connection alive and handle client messages
         while True:
             data = await websocket.receive_text()
-
-            # Handle client commands (e.g., cancel job)
             if data == "cancel":
                 # TODO: Publish cancellation to Redis
                 pass
