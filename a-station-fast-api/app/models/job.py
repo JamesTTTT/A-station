@@ -6,6 +6,7 @@ from .base import TimestampedUUIDModel
 import uuid
 from .playbook import Playbook
 from .user import User
+from .workspace import Workspace
 
 class Job(TimestampedUUIDModel):
     __tablename__ = "jobs"

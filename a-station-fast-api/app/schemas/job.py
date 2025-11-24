@@ -17,8 +17,22 @@ class JobStatus(str, Enum):
 class JobCreate(BaseModel):
     """Schema for creating a job"""
     playbook_id: UUID
+    ansible_version: str
+    inventory: str | None = None
+    extra_vars: dict | None = None
     # TODO: Add inventory_id when inventory is implemented
 
+class JobResponse(BaseModel):
+    """Schema for returning job data"""
+    id: UUID
+    workflow_id: UUID
+    status: JobStatus
+    task_id: str | None = None
+    queue: str | None = None
+    celery_status: str | None = None
+    result: dict | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
 
 class JobRead(TimestampedUUIDSchema):
     """Schema for reading job data"""
