@@ -17,16 +17,24 @@ export interface JobResponse {
   finished_at?: string;
 }
 
-export enum JobStatus {
-  PENDING = "pending",
-  RUNNING = "running",
-  SUCCESS = "success",
-  FAILURE = "failure",
-  CANCELLED = "cancelled",
-}
+export type JobStatus =
+  | "pending"
+  | "running"
+  | "success"
+  | "failure"
+  | "cancelled";
 
+// Raw Ansible event from the worker
 export interface JobStreamEvent {
-  type: "output" | "status" | "error" | "complete";
-  data: string | JobStatus;
+  job_id: string;
   timestamp: string;
+  event: string;
+  event_data: Record<string, unknown>;
+  uuid: string;
+  counter: number;
+  stdout: string;
+  task_name?: string;
+  play_name?: string;
+  error?: string;
+  result?: unknown;
 }

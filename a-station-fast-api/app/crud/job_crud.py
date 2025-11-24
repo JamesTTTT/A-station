@@ -8,7 +8,7 @@ from app.models.user import User
 
 def create_job(db: Session, job_data: JobCreate, current_user: User) -> Job:
     job = Job(
-        playbook_id=job_data.workflow_id,
+        playbook_id=job_data.playbook_id,
         status=JobStatus.PENDING,
         created_by=current_user,
         ansible_version=job_data.ansible_version or "2.15"  # Default

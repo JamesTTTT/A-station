@@ -1,10 +1,10 @@
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { CreatePlaybook } from "./Modals/CreatePlaybook";
 import { Button } from "@/components/ui";
 import { usePlaybookStore } from "@/stores/playbookStore.ts";
 import { LucideNotepadText } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore.ts";
 import { useEffect } from "react";
+import { DeletePlaybook, CreatePlaybook } from "@/components";
 
 export const FileTree = () => {
   const { selectedWorkspace } = useWorkspaceStore();
@@ -62,20 +62,26 @@ export const FileTree = () => {
           ) : (
             <div>
               {playbooks.map((playbook) => (
-                <button
+                <div
+                  key={playbook.id}
+                  className="group flex w-full items-center gap-2 px-2 py-1.5 hover:bg-accent cursor-pointer relative"
                   onClick={() => {
                     selectPlaybook(playbook.id);
                   }}
-                  key={playbook.id}
-                  className="flex w-full items-center gap-2 px-2 py-1.5 hover:bg-accent cursor-pointer"
                 >
                   <span className="text-muted-foreground text-xs">
                     <LucideNotepadText />
                   </span>
-                  <span className="text-sm text-foreground">
+                  <span className="text-sm text-foreground flex-1">
                     {playbook.name}
                   </span>
-                </button>
+                  <DeletePlaybook
+                    workspaceId={selectedWorkspace.id}
+                    playbookId={playbook.id}
+                    playbookName={playbook.name}
+                    onSuccess={() => fetchPlaybooks(selectedWorkspace.id, token!)}
+                  />
+                </div>
               ))}
             </div>
           )}

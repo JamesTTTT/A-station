@@ -11,11 +11,13 @@ class CallbackTask(Task):
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         logger.error(f"Task {task_id} failed: {exc}")
-        EventStreamer.publish_error(task_id, str(exc))
+        job_id = args[0] if args else task_id
+        EventStreamer.publish_error(job_id, str(exc))
 
     def on_success(self, retval, task_id, args, kwargs):
         logger.info(f"Task {task_id} succeeded")
-        EventStreamer.publish_complete(task_id, retval)
+        job_id = args[0] if args else task_id
+        EventStreamer.publish_complete(job_id, retval)
 
 @celery_app.task(base=CallbackTask, bind=True, name="tasks.run_playbook")
 def run_playbook(
@@ -40,7 +42,6 @@ def run_playbook(
         extra_vars=extra_vars or {}
     )
 
-    # Stream events to Redis as they happen
     streamer = EventStreamer(job_id)
 
     try:
@@ -50,7 +51,7 @@ def run_playbook(
             "status": result.status,
             "rc": result.rc,
             "stats": result.stats,
-            "events_count": len(result.events),
+            # "events_count": len(result.events),
             "final_summary": executor.get_final_summary(result)
         }
 

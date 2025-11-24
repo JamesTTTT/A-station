@@ -93,16 +93,6 @@ git config commit.template .gitmessage
 
 This will load the template every time you create a commit, making it easier to follow our format.
 
-### For AI Contributors
-
-When Claude or other AI assistants create commits on this project, they must follow the same format:
-- Analyze the scope of changes
-- Use single-line format for minor changes
-- Use multi-line format with type for substantial changes
-- Always include the commit message trailer: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
-
----
-
 ## Questions?
 
 If you have questions about these guidelines or suggestions for improvement, please open an issue or discussion.

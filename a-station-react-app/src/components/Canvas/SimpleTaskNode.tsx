@@ -2,6 +2,7 @@ import { Handle, Position } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
 import type { TaskNodeData } from "@/types/nodes";
 import { cn } from "@/lib/utils";
+import { Check, CircleX, RefreshCcw, SkipForward } from "lucide-react";
 
 export const SimpleTaskNode = ({ data, selected }: NodeProps<TaskNodeData>) => {
   // State-based styling
@@ -24,13 +25,29 @@ export const SimpleTaskNode = ({ data, selected }: NodeProps<TaskNodeData>) => {
   const getStateIcon = () => {
     switch (data.state) {
       case "running":
-        return <div className="text-blue-500 text-xl animate-spin">⟳</div>;
+        return (
+          <div className="text-blue-500 text-xl animate-spin">
+            <RefreshCcw />
+          </div>
+        );
       case "success":
-        return <div className="text-green-500 text-xl">✓</div>;
+        return (
+          <div className="text-green-500 text-xl">
+            <Check />
+          </div>
+        );
       case "failed":
-        return <div className="text-red-500 text-xl">✗</div>;
+        return (
+          <div className="text-red-500 text-xl">
+            <CircleX />
+          </div>
+        );
       case "skipped":
-        return <div className="text-yellow-500 text-xl">⊘</div>;
+        return (
+          <div className="text-yellow-500 text-xl">
+            <SkipForward />
+          </div>
+        );
       default:
         return null;
     }
@@ -78,4 +95,4 @@ export const SimpleTaskNode = ({ data, selected }: NodeProps<TaskNodeData>) => {
       />
     </div>
   );
-}
+};

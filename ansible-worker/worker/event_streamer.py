@@ -46,20 +46,24 @@ class EventStreamer:
         except Exception as e:
             logger.error(f"Failed to stream event: {e}")
 
-    def publish_error(self, error_message: str):
+    @staticmethod
+    def publish_error(job_id: str, error_message: str):
+        channel = f"job:{job_id}:events"
         error_event = {
-            "job_id": self.job_id,
+            "job_id": job_id,
             "timestamp": datetime.now().isoformat(),
             "event": "job_error",
             "error": error_message
         }
-        redis_client.publish(self.channel, json.dumps(error_event))
+        redis_client.publish(channel, json.dumps(error_event))
 
-    def publish_complete(self, result: dict):
+    @staticmethod
+    def publish_complete(job_id: str, result: dict):
+        channel = f"job:{job_id}:events"
         complete_event = {
-            "job_id": self.job_id,
+            "job_id": job_id,
             "timestamp": datetime.now().isoformat(),
             "event": "job_complete",
             "result": result
         }
-        redis_client.publish(self.channel, json.dumps(complete_event))
+        redis_client.publish(channel, json.dumps(complete_event))

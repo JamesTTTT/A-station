@@ -31,7 +31,7 @@ class AnsibleExecutor:
         (self.work_dir / "project").mkdir()
         (self.work_dir / "env").mkdir()
 
-        playbook_path = self.work_dir / "project" /"playbook"
+        playbook_path = self.work_dir / "project" /"playbook.yml"
         playbook_path.write_text(self.playbook_yaml)
 
         inventory_path = self.work_dir / "inventory" / "hosts"
@@ -48,9 +48,9 @@ class AnsibleExecutor:
         """
         logger.info(f"Executing playbook in {self.work_dir}")
 
-        runner = ansible_runner.run(
+        runner = ansible_runner.interface.run(
             private_data_dir=str(self.work_dir),
-            playbook="playbook.yml",
+            playbook=str(self.work_dir / "project" / "playbook.yml"),
             inventory=str(self.work_dir / "inventory" / "hosts"),
             extravars=self.extra_vars,
             quiet=False,
@@ -76,6 +76,15 @@ class AnsibleExecutor:
         """
         Extract final execution summary
         """
+        if runner.stats is None:
+            return {
+                "ok": 0,
+                "changed": 0,
+                "failures": 0,
+                "skipped": 0,
+                "rescued": 0,
+                "ignored": 0
+            }
         return {
             "ok": runner.stats.get("ok", 0),
             "changed": runner.stats.get("changed", 0),

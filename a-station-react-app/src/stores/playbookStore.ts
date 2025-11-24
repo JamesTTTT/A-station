@@ -1,7 +1,7 @@
 import type { PlaybookRead } from "@/types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { updatePlaybook, getPlaybooks } from "@/api/playbook-api";
+import { updatePlaybook, getPlaybooks, deletePlaybook } from "@/api/playbook-api";
 
 interface PlaybookStore {
   playbooks: PlaybookRead[];
@@ -18,6 +18,11 @@ interface PlaybookStore {
   clearSelection: () => void;
   updateDraft: (yamlContent: string) => void;
   savePlaybook: (
+    authToken: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  deletePlaybook: (
+    workspaceId: string,
+    playbookId: string,
     authToken: string,
   ) => Promise<{ success: boolean; error?: string }>;
 
@@ -126,6 +131,42 @@ export const usePlaybookStore = create<PlaybookStore>()(
             saveStatus: "error",
             saveError: "Failed to save playbook. Your changes are preserved.",
           });
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          };
+        }
+      },
+
+      deletePlaybook: async (
+        workspaceId: string,
+        playbookId: string,
+        authToken: string,
+      ) => {
+        try {
+          const result = await deletePlaybook(workspaceId, playbookId, authToken);
+
+          if (result.success) {
+            const state = get();
+            set({
+              playbooks: state.playbooks.filter((pb) => pb.id !== playbookId),
+              selectedPlaybookId:
+                state.selectedPlaybookId === playbookId
+                  ? null
+                  : state.selectedPlaybookId,
+              draftChanges:
+                state.selectedPlaybookId === playbookId
+                  ? null
+                  : state.draftChanges,
+            });
+            return { success: true };
+          } else {
+            return {
+              success: false,
+              error: result.error?.message || "Failed to delete playbook",
+            };
+          }
+        } catch (error) {
           return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",
