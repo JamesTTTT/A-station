@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { usePlaybookStore } from "@/stores/playbookStore.ts";
+import { useJobStore } from "@/stores/jobStore";
 import { YamlCodeViewer } from "@/components";
+import { PlaybookLogs } from "./PlaybookLogs";
 type Tab = "logs" | "yaml" | "llm";
 
 export const SecondaryToolbar = () => {
   const [activeTab, setActiveTab] = useState<Tab>("yaml");
   const { playbooks, selectedPlaybookId } = usePlaybookStore();
+  const { currentJob } = useJobStore();
   const selectedPlaybook = playbooks.find((pb) => pb.id === selectedPlaybookId);
   const yamlContent = selectedPlaybook?.yaml_content ?? "";
 
@@ -46,19 +49,13 @@ export const SecondaryToolbar = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto h-full">
-        {activeTab === "logs" && (
-          <div className="flex flex-col gap-2">
-            <div className="text-xs font-mono text-muted-foreground p-2 rounded bg-muted/50">
-              [INFO] Log output will appear here
-            </div>
-          </div>
-        )}
+      <div className="flex-1 overflow-hidden h-full">
+        {activeTab === "logs" && <PlaybookLogs jobId={currentJob?.id} />}
         {activeTab === "yaml" && (
           <YamlCodeViewer content={yamlContent} readOnly={true} height="100%" />
         )}
         {activeTab === "llm" && (
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground p-4">
             LLM output will appear here
           </div>
         )}

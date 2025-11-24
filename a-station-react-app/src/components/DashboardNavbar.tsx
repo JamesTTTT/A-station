@@ -10,7 +10,7 @@ export const DashboardNavbar = () => {
   const { selectedWorkspace } = useWorkspaceStore();
 
   return (
-    <div className="flex items-center justify-between h-16 px-4 bg-card border-b border-border">
+    <div className="flex items-center justify-between h-10 pl-4 bg-card border-b border-border">
       <div className="flex items-center gap-3">
         <h1 className="text-xl font-semibold text-primary">
           <Link to={"/workspaces/select"}>A-Station</Link>
@@ -24,7 +24,7 @@ export const DashboardNavbar = () => {
           </>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-0 h-10">
         <ThemeToggle />
         <Button className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted hover:bg-accent transition-colors">
           <span className="text-muted-foreground text-sm">
@@ -36,7 +36,7 @@ export const DashboardNavbar = () => {
             <User />
           </span>
         </Button>
-        <Button className="flex items-center justify-center rounded-lg bg-muted hover:bg-accent transition-colors">
+        <Button className="flex items-center justify-center h-10 rounded-lg bg-muted hover:bg-accent transition-colors">
           <span className="text-muted-foreground text-sm">Upgrade</span>
         </Button>
       </div>
