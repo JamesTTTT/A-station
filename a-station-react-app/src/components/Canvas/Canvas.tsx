@@ -9,13 +9,17 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useCanvasStore } from "@/stores/canvasStore.ts";
 import { usePlaybookStore } from "@/stores/playbookStore";
+import { useJobStore } from "@/stores/jobStore";
 import { nodeTypes } from "@/components/Canvas/nodeTypes";
 
 import { Button } from "@/components/ui";
 import { useEffect } from "react";
 import { Play } from "lucide-react";
+import { useJobExecution } from "@/hooks";
 
 export const Canvas = () => {
+  const { executeJob } = useJobExecution();
+  const { setCurrentJob } = useJobStore();
   const {
     nodes,
     edges,
@@ -82,7 +86,17 @@ export const Canvas = () => {
               </div>
 
               <div>
-                <Button onClick={() => {}}>
+                <Button
+                  onClick={async () => {
+                    const job = await executeJob({
+                      playbook_id: selectedPlaybook.id,
+                      ansible_version: "2.17",
+                    });
+                    if (job) {
+                      setCurrentJob(job);
+                    }
+                  }}
+                >
                   <Play />
                 </Button>
               </div>

@@ -1,7 +1,16 @@
 import { Handle, Position } from "@xyflow/react";
-import { ChevronDown, ChevronUp, BookOpen } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  BookOpen,
+  Check,
+  CircleX,
+  RefreshCcw,
+  SkipForward,
+} from "lucide-react";
 import type { HeadNodeData } from "@/types/nodes";
 import { useCanvasStore } from "@/stores/canvasStore";
+import { cn } from "@/lib/utils";
 
 interface HeadNodeProps {
   id: string;
@@ -10,18 +19,35 @@ interface HeadNodeProps {
 }
 
 export const HeadNode = ({ id, data, selected }: HeadNodeProps) => {
-  const toggleExpansion = useCanvasStore((state) => state.toggleHeadNodeExpansion);
+  const toggleExpansion = useCanvasStore(
+    (state) => state.toggleHeadNodeExpansion,
+  );
 
   const handleToggle = () => {
     toggleExpansion(id);
   };
 
+  const getStateIcon = () => {
+    switch (data.state) {
+      case "running":
+        return <RefreshCcw className="w-4 h-4 text-blue-500 animate-spin" />;
+      case "success":
+        return <Check className="w-4 h-4 text-green-500" />;
+      case "failed":
+        return <CircleX className="w-4 h-4 text-red-500" />;
+      case "skipped":
+        return <SkipForward className="w-4 h-4 text-yellow-500" />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div
-      className={`
-        bg-card border-2 rounded-lg shadow-lg min-w-[350px] transition-all
-        ${selected ? "border-primary" : "border-border"}
-      `}
+      className={cn(
+        "border-2 rounded-lg shadow-lg min-w-[350px] transition-all duration-200 border-border bg-card",
+        selected && "ring-2 ring-primary ring-offset-2",
+      )}
     >
       {/* Top Handle for dependencies */}
       <Handle
@@ -35,6 +61,7 @@ export const HeadNode = ({ id, data, selected }: HeadNodeProps) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-primary" />
+            {getStateIcon()}
             <span className="text-xs font-mono text-muted-foreground">
               #{data.order}
             </span>
@@ -61,7 +88,9 @@ export const HeadNode = ({ id, data, selected }: HeadNodeProps) => {
         <div className="px-4 py-3 space-y-2 text-sm">
           {data.hosts && (
             <div>
-              <span className="font-semibold text-muted-foreground">Hosts: </span>
+              <span className="font-semibold text-muted-foreground">
+                Hosts:{" "}
+              </span>
               <span className="font-mono">
                 {Array.isArray(data.hosts) ? data.hosts.join(", ") : data.hosts}
               </span>
@@ -70,7 +99,9 @@ export const HeadNode = ({ id, data, selected }: HeadNodeProps) => {
 
           {data.become !== undefined && (
             <div>
-              <span className="font-semibold text-muted-foreground">Become: </span>
+              <span className="font-semibold text-muted-foreground">
+                Become:{" "}
+              </span>
               <span className={data.become ? "text-green-500" : "text-red-500"}>
                 {data.become ? "Yes" : "No"}
               </span>
@@ -82,8 +113,14 @@ export const HeadNode = ({ id, data, selected }: HeadNodeProps) => {
 
           {data.gather_facts !== undefined && (
             <div>
-              <span className="font-semibold text-muted-foreground">Gather Facts: </span>
-              <span className={data.gather_facts ? "text-green-500" : "text-red-500"}>
+              <span className="font-semibold text-muted-foreground">
+                Gather Facts:{" "}
+              </span>
+              <span
+                className={
+                  data.gather_facts ? "text-green-500" : "text-red-500"
+                }
+              >
                 {data.gather_facts ? "Yes" : "No"}
               </span>
             </div>
@@ -91,7 +128,9 @@ export const HeadNode = ({ id, data, selected }: HeadNodeProps) => {
 
           {data.tags && data.tags.length > 0 && (
             <div>
-              <span className="font-semibold text-muted-foreground">Tags: </span>
+              <span className="font-semibold text-muted-foreground">
+                Tags:{" "}
+              </span>
               <div className="flex flex-wrap gap-1 mt-1">
                 {data.tags.map((tag, idx) => (
                   <span
@@ -107,7 +146,9 @@ export const HeadNode = ({ id, data, selected }: HeadNodeProps) => {
 
           {data.vars && Object.keys(data.vars).length > 0 && (
             <div>
-              <span className="font-semibold text-muted-foreground">Variables: </span>
+              <span className="font-semibold text-muted-foreground">
+                Variables:{" "}
+              </span>
               <pre className="mt-1 p-2 bg-muted rounded text-xs font-mono overflow-x-auto">
                 {JSON.stringify(data.vars, null, 2)}
               </pre>
@@ -121,7 +162,8 @@ export const HeadNode = ({ id, data, selected }: HeadNodeProps) => {
         <div className="px-4 py-2 text-xs text-muted-foreground">
           {data.hosts && (
             <span>
-              Hosts: {Array.isArray(data.hosts) ? data.hosts.join(", ") : data.hosts}
+              Hosts:{" "}
+              {Array.isArray(data.hosts) ? data.hosts.join(", ") : data.hosts}
             </span>
           )}
         </div>

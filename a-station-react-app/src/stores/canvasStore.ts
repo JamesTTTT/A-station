@@ -1,14 +1,14 @@
-import {create} from "zustand";
-import {persist} from "zustand/middleware";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import {
   type Node,
   type Edge,
   applyNodeChanges,
   applyEdgeChanges,
 } from "@xyflow/react";
-import type {OnNodesChange, OnEdgesChange, OnConnect} from "@xyflow/react";
-import type {TaskNodeData, ExecutionState, HeadNodeData} from "@/types/nodes";
-import {playbookParser} from "@/services/yaml-parser";
+import type { OnNodesChange, OnEdgesChange, OnConnect } from "@xyflow/react";
+import type { TaskNodeData, ExecutionState, HeadNodeData } from "@/types/nodes";
+import { playbookParser } from "@/services/yaml-parser";
 
 interface CanvasStore {
   // State
@@ -21,8 +21,14 @@ interface CanvasStore {
   onConnect: OnConnect;
 
   // Playbook loading
-  loadFromYAML: (yamlContent: string, playbookFile?: string, playbookId?: string) => void;
-  loadMultiplePlaybooks: (playbooks: Array<{ content: string, filename: string, id: string }>) => void;
+  loadFromYAML: (
+    yamlContent: string,
+    playbookFile?: string,
+    playbookId?: string,
+  ) => void;
+  loadMultiplePlaybooks: (
+    playbooks: Array<{ content: string; filename: string; id: string }>,
+  ) => void;
 
   // HeadNode management
   toggleHeadNodeExpansion: (headNodeId: string) => void;
@@ -30,6 +36,10 @@ interface CanvasStore {
   // Execution state management
   updateTaskState: (taskId: string, state: ExecutionState) => void;
   updateTaskStateByName: (taskName: string, state: ExecutionState) => void;
+  updateHeadNodeStateByPlayName: (
+    playName: string,
+    state: ExecutionState,
+  ) => void;
   resetAllTaskStates: () => void;
 
   // Canvas management
@@ -56,21 +66,31 @@ export const useCanvasStore = create<CanvasStore>()(
 
       onConnect: (connection) => {
         set({
-          edges: [...get().edges, {...connection, id: `edge-${Date.now()}`}],
+          edges: [...get().edges, { ...connection, id: `edge-${Date.now()}` }],
         });
       },
 
-      loadFromYAML: (yamlContent, playbookFile = "playbook.yml", playbookId = "default") => {
-        const result = playbookParser.parse(yamlContent, playbookFile, playbookId);
+      loadFromYAML: (
+        yamlContent,
+        playbookFile = "playbook.yml",
+        playbookId = "default",
+      ) => {
+        const result = playbookParser.parse(
+          yamlContent,
+          playbookFile,
+          playbookId,
+        );
 
         if (!result.success) {
           console.error("Failed to parse YAML:", result.error);
-          set({nodes: [], edges: []});
+          set({ nodes: [], edges: [] });
           return;
         }
 
         if (result.headNodes && result.headNodes.length > 0) {
-          get().loadMultiplePlaybooks([{ content: yamlContent, filename: playbookFile, id: playbookId }]);
+          get().loadMultiplePlaybooks([
+            { content: yamlContent, filename: playbookFile, id: playbookId },
+          ]);
           return;
         }
 
@@ -90,7 +110,7 @@ export const useCanvasStore = create<CanvasStore>()(
             playbookFile: task.playbookFile,
             playbookId: task.playbookId,
             parentHeadNodeId: task.parentHeadNodeId,
-            type: "simpleTask"
+            type: "simpleTask",
           },
         }));
 
@@ -105,7 +125,7 @@ export const useCanvasStore = create<CanvasStore>()(
           });
         }
 
-        set({nodes, edges});
+        set({ nodes, edges });
       },
 
       loadMultiplePlaybooks: (playbooks) => {
@@ -113,7 +133,7 @@ export const useCanvasStore = create<CanvasStore>()(
 
         if (!result.success) {
           console.error("Failed to parse playbooks:", result.error);
-          set({nodes: [], edges: []});
+          set({ nodes: [], edges: [] });
           return;
         }
 
@@ -121,17 +141,18 @@ export const useCanvasStore = create<CanvasStore>()(
         const edges: Edge[] = [];
 
         let currentY = 100;
-        const HEADNODE_HEIGHT = 200;  // Height when collapsed
+        const HEADNODE_HEIGHT = 200; // Height when collapsed
         const TASK_HEIGHT = 120;
-        const X_POSITION = 300;
+        let X_POSITION = 300;
 
         for (const headNode of result.headNodes) {
           nodes.push({
             id: headNode.id,
             type: "headNode",
-            position: {x: X_POSITION, y: currentY},
+            position: { x: X_POSITION, y: currentY },
             data: {
               ...headNode,
+              state: "idle" as ExecutionState,
               isExpanded: false,
               type: "headNode" as const,
             },
@@ -140,14 +161,14 @@ export const useCanvasStore = create<CanvasStore>()(
           currentY += HEADNODE_HEIGHT;
 
           const headNodeTasks = result.tasks.filter(
-            (task) => task.parentHeadNodeId === headNode.id
+            (task) => task.parentHeadNodeId === headNode.id,
           );
 
           for (const task of headNodeTasks) {
             nodes.push({
               id: task.id,
               type: "simpleTask",
-              position: {x: X_POSITION + 50, y: currentY},
+              position: { x: X_POSITION + 50, y: currentY },
               data: {
                 taskId: task.id,
                 name: task.name,
@@ -163,14 +184,14 @@ export const useCanvasStore = create<CanvasStore>()(
 
             currentY += TASK_HEIGHT;
           }
-
-          currentY += 100;
+          currentY = 100;
+          X_POSITION += 500;
         }
 
         // Create Head edges
         for (const headNode of result.headNodes) {
           const headNodeTasks = result.tasks.filter(
-            (task) => task.parentHeadNodeId === headNode.id
+            (task) => task.parentHeadNodeId === headNode.id,
           );
 
           if (headNodeTasks.length > 0) {
@@ -214,7 +235,7 @@ export const useCanvasStore = create<CanvasStore>()(
         //   });
         // }
 
-        set({nodes, edges});
+        set({ nodes, edges });
       },
 
       toggleHeadNodeExpansion: (headNodeId) => {
@@ -225,10 +246,10 @@ export const useCanvasStore = create<CanvasStore>()(
                   ...node,
                   data: {
                     ...node.data,
-                    isExpanded: !(node.data as HeadNodeData).isExpanded
-                  } as HeadNodeData
+                    isExpanded: !(node.data as HeadNodeData).isExpanded,
+                  } as HeadNodeData,
                 }
-              : node
+              : node,
           ),
         });
       },
@@ -237,7 +258,7 @@ export const useCanvasStore = create<CanvasStore>()(
         set({
           nodes: get().nodes.map((node) =>
             node.id === taskId
-              ? {...node, data: {...node.data, state}}
+              ? { ...node, data: { ...node.data, state } }
               : node,
           ),
         });
@@ -246,7 +267,18 @@ export const useCanvasStore = create<CanvasStore>()(
         set({
           nodes: get().nodes.map((node) =>
             node.data.name === taskName
-              ? {...node, data: {...node.data, state}}
+              ? { ...node, data: { ...node.data, state } }
+              : node,
+          ),
+        });
+      },
+
+      updateHeadNodeStateByPlayName: (playName, state) => {
+        set({
+          nodes: get().nodes.map((node) =>
+            node.data.type === "headNode" &&
+            (node.data as HeadNodeData).playName === playName
+              ? { ...node, data: { ...node.data, state } }
               : node,
           ),
         });
@@ -256,7 +288,7 @@ export const useCanvasStore = create<CanvasStore>()(
         set({
           nodes: get().nodes.map((node) => ({
             ...node,
-            data: {...node.data, state: "idle"},
+            data: { ...node.data, state: "idle" },
           })),
         });
       },
@@ -273,7 +305,7 @@ export const useCanvasStore = create<CanvasStore>()(
       partialize: (state) => ({
         nodes: state.nodes.map((node) => ({
           ...node,
-          data: {...node.data, state: "idle"},
+          data: { ...node.data, state: "idle" },
         })),
         edges: state.edges,
       }),
