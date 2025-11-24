@@ -44,6 +44,7 @@ def update_playbook(
     return db_playbook
 
 def delete_playbook(db: Session, playbook_id: UUID) -> bool:
+    #TODO: Figure out what happens to deleted jobs
     db_playbook = get_playbook(db, playbook_id)
     if not db_playbook:
         return False

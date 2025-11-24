@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
-from api.endpoints.playbooks import get_playbook
 from app.celery_app.client import celery_app
-from app.models.job import Job, JobStatus
 from app.schemas.job import JobCreate, JobResponse
 from app.db.base import get_db
 from app.core.security import get_current_user
 from app.crud.job_crud import create_job, get_job_status
-from app.models import User, Workspace, Playbook
+from app.models import User
+from app.crud import playbook_crud
+
 
 jobs_router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -25,7 +25,7 @@ async def run_job(
 
     queue_name = f"ansible_{job.ansible_version.replace('.', '_')}"
 
-    pb = get_playbook(db=db, playbook_id=job.playbook_id)
+    pb = playbook_crud.get_playbook(db, job_data.playbook_id)
 
     if not pb:
         raise HTTPException(status_code=404, detail="Playbook not found")
@@ -47,7 +47,7 @@ async def run_job(
         id=job.id,
         workflow_id=job.playbook_id,
         status=job.status,
-        task_id=task.id,
+        task_id=task.task_id,
         queue=queue_name
     )
 
