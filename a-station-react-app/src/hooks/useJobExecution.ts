@@ -2,7 +2,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { startJob } from "@/api/job-api";
 import { JobWebSocketManager } from "@/websocket/job-websocket.ts";
 import { useAuthStore } from "@/stores/authStore";
-import type { JobCreate, JobResponse, JobStatus, JobStreamEvent } from "@/types";
+import { useCanvasStore } from "@/stores/canvasStore.ts";
+import { useJobStore } from "@/stores/jobStore.ts";
+import type {
+  JobCreate,
+  JobResponse,
+  JobStatus,
+  JobStreamEvent,
+} from "@/types";
 
 interface UseJobExecutionOptions {
   onComplete?: (result: unknown) => void;
@@ -14,7 +21,6 @@ interface JobExecutionState {
   isLoading: boolean;
   isRunning: boolean;
   job: JobResponse | null;
-  output: string[];
   status: JobStatus | null;
   error: string | null;
 }
@@ -28,52 +34,147 @@ export const useJobExecution = (options: UseJobExecutionOptions = {}) => {
     isLoading: false,
     isRunning: false,
     job: null,
-    output: [],
     status: null,
     error: null,
   });
 
+  const play = useRef<string>("");
+
   const handleWebSocketEvent = useCallback(
     (event: JobStreamEvent) => {
-      switch (event.type) {
-        case "output":
+      // Set logs
+      if (event.stdout && event.stdout.trim()) {
+        useJobStore.getState().addLog(event.stdout);
+      }
+      console.log(event.event);
+      console.log("Event:", event);
+      switch (event.event) {
+        case "playbook_on_start":
           setState((prev) => ({
             ...prev,
-            output: [...prev.output, event.data as string],
+            status: "running",
+            isRunning: true,
           }));
+          useJobStore.getState().setIsRunning(true);
           break;
 
-        case "status":
+        case "playbook_on_stats":
           setState((prev) => ({
             ...prev,
-            status: event.data as JobStatus,
-            isRunning: event.data === "running",
+            status: "success",
+            isRunning: false,
           }));
+          useJobStore.getState().setIsRunning(false);
+          onComplete?.(event.event_data);
           break;
 
-        case "error":
-          const errorMsg = event.data as string;
+        case "runner_on_failed":
+          // Task failure
+          if (event.task_name) {
+            useCanvasStore
+              .getState()
+              .updateTaskStateByName(event.task_name, "failed");
+          }
+          if (event.event_data.play) {
+            useCanvasStore
+              .getState()
+              .updateHeadNodeStateByPlayName(play.current, "failed");
+          }
+          setState((prev) => ({
+            ...prev,
+            status: "failure",
+            isRunning: false,
+          }));
+          const taskError = `Task failed: ${event.task_name || "unknown"}`;
+          useJobStore.getState().setIsRunning(false);
+          useJobStore.getState().setError(taskError);
+          onError?.(taskError);
+          break;
+
+        case "job_error":
+          const errorMsg = event.error || "Job error occurred";
           setState((prev) => ({
             ...prev,
             error: errorMsg,
+            status: "failure",
             isRunning: false,
           }));
+          useJobStore.getState().setIsRunning(false);
+          useJobStore.getState().setError(errorMsg);
           onError?.(errorMsg);
           break;
 
-        case "complete":
+        case "job_complete":
           setState((prev) => ({
             ...prev,
+            status: "success",
             isRunning: false,
           }));
-          onComplete?.(event.data);
+
+          useJobStore.getState().setIsRunning(false);
+          onComplete?.(event.result);
+
+          useCanvasStore
+            .getState()
+            .updateHeadNodeStateByPlayName(play.current, "success");
+          break;
+
+        case "playbook_on_play_start":
+          play.current = event.event_data.play;
+          if (event.event_data.play) {
+            useCanvasStore
+              .getState()
+              .updateHeadNodeStateByPlayName(play.current, "running");
+          }
+          break;
+
+        case "runner_on_start":
+          if (event.task_name) {
+            useCanvasStore
+              .getState()
+              .updateTaskStateByName(event.task_name, "running");
+          }
+          break;
+
+        case "runner_on_ok":
+          if (event.task_name) {
+            useCanvasStore
+              .getState()
+              .updateTaskStateByName(event.task_name, "success");
+
+            if (event.event_data.play) {
+              useCanvasStore
+                .getState()
+                .updateHeadNodeStateByPlayName(play.current, "success");
+            }
+          }
+          break;
+        case "runner_on_skipped":
+          if (event.task_name) {
+            useCanvasStore
+              .getState()
+              .updateTaskStateByName(event.task_name, "skipped");
+          }
+          break;
+
+        case "runner_on_unreachable":
+          if (event.task_name) {
+            useCanvasStore
+              .getState()
+              .updateTaskStateByName(event.task_name, "failed");
+          }
+          if (event.event_data.play) {
+            useCanvasStore
+              .getState()
+              .updateHeadNodeStateByPlayName(play.current, "failed");
+          }
           break;
 
         default:
-          console.warn("Unknown event type:", event.type);
+          console.debug("Unhandled Ansible event:", event.event);
       }
     },
-    [onComplete, onError]
+    [onComplete, onError],
   );
 
   const executeJob = useCallback(
@@ -90,10 +191,12 @@ export const useJobExecution = (options: UseJobExecutionOptions = {}) => {
         isLoading: true,
         isRunning: false,
         job: null,
-        output: [],
         status: null,
         error: null,
       });
+
+      useJobStore.getState().setIsRunning(false);
+      useJobStore.getState().setError(null);
 
       try {
         // Start the job via HTTP
@@ -119,6 +222,8 @@ export const useJobExecution = (options: UseJobExecutionOptions = {}) => {
           status: job.status,
         }));
 
+        useJobStore.getState().setIsRunning(true);
+
         // Connect to WebSocket for streaming
         if (autoConnect) {
           wsManagerRef.current = new JobWebSocketManager(job.id, token);
@@ -137,7 +242,7 @@ export const useJobExecution = (options: UseJobExecutionOptions = {}) => {
         onError?.(errorMsg);
       }
     },
-    [token, autoConnect, handleWebSocketEvent, onError]
+    [token, autoConnect, handleWebSocketEvent, onError],
   );
 
   const connectToJob = useCallback(
@@ -155,10 +260,9 @@ export const useJobExecution = (options: UseJobExecutionOptions = {}) => {
       setState((prev) => ({
         ...prev,
         isRunning: true,
-        output: [],
       }));
     },
-    [token, handleWebSocketEvent]
+    [token, handleWebSocketEvent],
   );
 
   const disconnect = useCallback(() => {
