@@ -46,7 +46,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
               loading: false,
             });
           }
-        } catch (error) {
+        } catch {
           set({
             error: "An unexpected error occurred",
             loading: false,

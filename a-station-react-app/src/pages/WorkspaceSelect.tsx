@@ -21,6 +21,8 @@ export const WorkspaceSelect = () => {
   const { setSelectedWorkspace, fetchWorkspaces, workspaces, loading, error } =
     useWorkspaceStore();
 
+  // TODO: Implement fetching workspace details with members
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [workspaceDetails, setWorkspaceDetails] = useState<
     Map<string, WorkspaceWithMembers>
   >(new Map());

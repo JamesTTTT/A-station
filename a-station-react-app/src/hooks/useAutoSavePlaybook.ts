@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { usePlaybookStore } from "@/stores/playbookStore";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -21,6 +21,19 @@ export const useAutoSavePlaybook = (options: UseAutoSaveOptions = {}) => {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
 
+  const attemptSave = useCallback(async () => {
+    if (!token) return;
+
+    const result = await savePlaybook(token);
+
+    if (!result.success && attemptsRef.current < maxRetries) {
+      attemptsRef.current++;
+      setTimeout(() => attemptSave(), retryDelayMs);
+    } else {
+      attemptsRef.current = 0;
+    }
+  }, [token, savePlaybook, maxRetries, retryDelayMs]);
+
   useEffect(() => {
     if (!draftChanges || !selectedPlaybookId || !token) {
       return;
@@ -42,20 +55,7 @@ export const useAutoSavePlaybook = (options: UseAutoSaveOptions = {}) => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [draftChanges, selectedPlaybookId, token, debounceMs]);
-
-  const attemptSave = async () => {
-    if (!token) return;
-
-    const result = await savePlaybook(token);
-
-    if (!result.success && attemptsRef.current < maxRetries) {
-      attemptsRef.current++;
-      setTimeout(attemptSave, retryDelayMs);
-    } else {
-      attemptsRef.current = 0;
-    }
-  };
+  }, [draftChanges, selectedPlaybookId, token, debounceMs, attemptSave]);
 
   useEffect(() => {
     return () => {
@@ -63,5 +63,5 @@ export const useAutoSavePlaybook = (options: UseAutoSaveOptions = {}) => {
         savePlaybook(token);
       }
     };
-  }, []);
+  }, [draftChanges, token, savePlaybook]);
 };

@@ -3,6 +3,7 @@
  * Central export for all shadcn/ui components
  */
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { Button, buttonVariants } from "./button";
 export { Input } from "./input";
 export { Label } from "./label";
@@ -28,8 +29,10 @@ export {
   NavigationMenuLink,
   NavigationMenuIndicator,
   NavigationMenuViewport,
-  navigationMenuTriggerStyle,
 } from "./navigation-menu";
+
+// eslint-disable-next-line react-refresh/only-export-components
+export { navigationMenuTriggerStyle } from "./navigation-menu";
 
 export {
   Dialog,

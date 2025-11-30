@@ -16,7 +16,7 @@ export const FileTree = () => {
   useEffect(() => {
     if (!selectedWorkspace || !token) return;
     fetchPlaybooks(selectedWorkspace.id, token);
-  }, [selectedWorkspace?.id, token, fetchPlaybooks]);
+  }, [selectedWorkspace, token, fetchPlaybooks]);
 
   if (!selectedWorkspace) {
     return null;

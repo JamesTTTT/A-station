@@ -68,7 +68,7 @@ export const useJobExecution = (options: UseJobExecutionOptions = {}) => {
           onComplete?.(event.event_data);
           break;
 
-        case "runner_on_failed":
+        case "runner_on_failed": {
           // Task failure
           if (event.task_name) {
             useCanvasStore
@@ -90,8 +90,9 @@ export const useJobExecution = (options: UseJobExecutionOptions = {}) => {
           useJobStore.getState().setError(taskError);
           onError?.(taskError);
           break;
+        }
 
-        case "job_error":
+        case "job_error": {
           const errorMsg = event.error || "Job error occurred";
           setState((prev) => ({
             ...prev,
@@ -103,6 +104,7 @@ export const useJobExecution = (options: UseJobExecutionOptions = {}) => {
           useJobStore.getState().setError(errorMsg);
           onError?.(errorMsg);
           break;
+        }
 
         case "job_complete":
           setState((prev) => ({

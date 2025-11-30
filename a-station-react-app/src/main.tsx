@@ -5,7 +5,7 @@ import { router } from "./routes";
 import "./index.css";
 import { useAuthInit } from "@/hooks/useAuthInit";
 
-function App() {
+export function App() {
   const { isInitialized } = useAuthInit();
 
   if (!isInitialized) {

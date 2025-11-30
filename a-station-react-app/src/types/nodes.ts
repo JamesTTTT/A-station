@@ -47,7 +47,7 @@ export interface HeadNodeData {
   hosts?: string | string[];
   become?: boolean;
   becomeUser?: string;
-  vars?: Record<string, any>;
+  vars?: Record<string, unknown>;
   tags?: string[];
   gather_facts?: boolean;
 
@@ -65,7 +65,7 @@ export interface HeadNode {
   hosts?: string | string[];
   become?: boolean;
   becomeUser?: string;
-  vars?: Record<string, any>;
+  vars?: Record<string, unknown>;
   tags?: string[];
   gather_facts?: boolean;
 }
