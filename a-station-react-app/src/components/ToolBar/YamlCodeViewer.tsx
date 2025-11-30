@@ -1,6 +1,7 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
 import { useMemo } from "react";
+import { Copy, Lock, Trash2 } from "lucide-react";
 
 interface YamlCodeViewerProps {
   content: string;

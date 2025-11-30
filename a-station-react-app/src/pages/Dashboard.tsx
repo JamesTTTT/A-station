@@ -2,10 +2,10 @@ import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Canvas,
-  DashboardNavbar,
+  DashboardTopBar,
   FileTree,
   SecondaryToolbar,
-  Toolbar,
+  DashboardNavigation,
 } from "@/components";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 
@@ -29,9 +29,9 @@ export const Dashboard = () => {
 
   return (
     <main className={"flex flex-col w-screen h-screen -mx-auto"}>
-      <DashboardNavbar />
+      <DashboardTopBar />
       <div className={"overflow-hidden flex flex-row justify-between flex-1"}>
-        <Toolbar />
+        <DashboardNavigation />
         <FileTree />
         <Canvas />
         <SecondaryToolbar />

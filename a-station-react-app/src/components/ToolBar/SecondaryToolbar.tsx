@@ -9,6 +9,7 @@ export const SecondaryToolbar = () => {
   const [activeTab, setActiveTab] = useState<Tab>("yaml");
   const { playbooks, selectedPlaybookId } = usePlaybookStore();
   const { currentJob } = useJobStore();
+  const { updateDraft } = usePlaybookStore();
   const selectedPlaybook = playbooks.find((pb) => pb.id === selectedPlaybookId);
   const yamlContent = selectedPlaybook?.yaml_content ?? "";
 
@@ -52,7 +53,13 @@ export const SecondaryToolbar = () => {
       <div className="flex-1 overflow-hidden h-full">
         {activeTab === "logs" && <PlaybookLogs jobId={currentJob?.id} />}
         {activeTab === "yaml" && (
-          <YamlCodeViewer content={yamlContent} readOnly={true} height="100%" />
+          <YamlCodeViewer
+            content={yamlContent}
+            height="100%"
+            onChange={() => {
+              updateDraft(yamlContent);
+            }}
+          />
         )}
         {activeTab === "llm" && (
           <div className="text-sm text-muted-foreground p-4">

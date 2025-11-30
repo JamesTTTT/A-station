@@ -6,7 +6,7 @@ import { Button } from "@/components/ui";
 import { Settings2, User } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
-export const DashboardNavbar = () => {
+export const DashboardTopBar = () => {
   const { selectedWorkspace } = useWorkspaceStore();
 
   return (

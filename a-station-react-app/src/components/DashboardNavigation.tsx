@@ -1,7 +1,7 @@
 import { GalleryVerticalEnd, ListFilterPlus, Plus } from "lucide-react";
 import { Button } from "@/components/ui";
 
-export const Toolbar = () => {
+export const DashboardNavigation = () => {
   return (
     <div className="flex flex-col items-center w-10 h-full bg-card border-r border-border">
       <div className="flex flex-col items-center">
