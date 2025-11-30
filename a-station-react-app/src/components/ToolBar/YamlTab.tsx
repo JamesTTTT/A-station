@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { Lock, Unlock, Save } from "lucide-react";
+
 import { YamlCodeViewer } from "@/components";
+
+import { useAutoSavePlaybook } from "@/hooks/useAutoSavePlaybook.ts";
+
 import { usePlaybookStore } from "@/stores/playbookStore.ts";
 import { useAuthStore } from "@/stores/authStore.ts";
-import { useAutoSavePlaybook } from "@/hooks/useAutoSavePlaybook.ts";
-import { useState } from "react";
 import { useWorkspaceStore } from "@/stores/workspaceStore.ts";
 
 export function YamlTab() {
@@ -35,14 +38,14 @@ export function YamlTab() {
   };
 
   const handleManualSave = async () => {
-    if (token) {
-      await savePlaybook(token, selectedWorkspace?.id || "");
+    if (token && selectedWorkspace?.id) {
+      await savePlaybook(token, selectedWorkspace.id);
     }
   };
 
   return (
     <div className={"h-full w-full"}>
-      <div className="flex items-center align-middle justify-between px-3 py-2 border-b border-border bg-muted/30">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">
             {readOnly ? (
