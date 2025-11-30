@@ -21,7 +21,9 @@ export const WorkspaceSelect = () => {
   const { setSelectedWorkspace, fetchWorkspaces, workspaces, loading, error } =
     useWorkspaceStore();
 
-  const [workspaceDetails, setWorkspaceDetails] = useState<
+  // TODO: Implement fetching workspace details with members
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [workspaceDetails, _setWorkspaceDetails] = useState<
     Map<string, WorkspaceWithMembers>
   >(new Map());
 
@@ -66,7 +68,7 @@ export const WorkspaceSelect = () => {
           </div>
           <div className="flex items-center gap-3">
             <CreateWorkspace
-              onSuccess={fetchWorkspaces}
+              onSuccess={() => token && fetchWorkspaces(token)}
               trigger={
                 <Button>
                   <Plus />

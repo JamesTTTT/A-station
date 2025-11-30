@@ -70,7 +70,7 @@ export const usePlaybookStore = create<PlaybookStore>()(
               loading: false,
             });
           }
-        } catch (error) {
+        } catch {
           set({
             error: "An unexpected error occurred",
             loading: false,

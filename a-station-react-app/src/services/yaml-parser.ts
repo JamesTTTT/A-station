@@ -1,6 +1,22 @@
 import yaml from "js-yaml";
 import type {PlaybookTask, ParseResult, HeadNode} from "@/types/nodes";
 
+interface AnsibleTask {
+  name?: string;
+  [key: string]: unknown;
+}
+
+interface AnsiblePlay {
+  name?: string;
+  hosts?: string | string[];
+  become?: boolean;
+  become_user?: string;
+  vars?: Record<string, unknown>;
+  tags?: string[];
+  gather_facts?: boolean;
+  tasks?: AnsibleTask[];
+}
+
 export class PlaybookParser {
   // Public method for backward compatibility (single playbook)
   public parse(
@@ -22,7 +38,7 @@ export class PlaybookParser {
     }
 
     try {
-      const parsed = yaml.load(yamlContent) as any;
+      const parsed = yaml.load(yamlContent) as AnsiblePlay[];
 
       if (!Array.isArray(parsed)) {
         return {
@@ -120,7 +136,7 @@ export class PlaybookParser {
   }
 
   private extractPlayTasks(
-    play: any,
+    play: AnsiblePlay,
     playbookId: string,
     playbookFile: string,
     parentHeadNodeId: string,
@@ -151,7 +167,7 @@ export class PlaybookParser {
   }
 
   private extractTask(
-    task: any,
+    task: AnsibleTask,
     order: number,
     playName: string,
     playbookId: string,
@@ -179,12 +195,12 @@ export class PlaybookParser {
     }
   }
 
-  private deriveTaskName(task: any): string {
+  private deriveTaskName(task: AnsibleTask): string {
     const module = this.extractModule(task);
     return module ? `${module} task` : "Unnamed task";
   }
 
-  private extractModule(task: any): string {
+  private extractModule(task: AnsibleTask): string {
     // Meta keys to ignore
     const metaKeys = [
       "name",

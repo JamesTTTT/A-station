@@ -2,6 +2,7 @@
  * Custom Components
  * Central export for all custom application components
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export * from "./ui";
 
 export { LoginFields } from "./LoginFields";

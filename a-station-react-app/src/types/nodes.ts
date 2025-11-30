@@ -16,7 +16,7 @@ export type ExecutionState =
   | "failed"
   | "skipped";
 
-export interface TaskNodeData {
+export interface TaskNodeData extends Record<string, unknown> {
   taskId: string;
   name: string;
   module: string;
@@ -37,7 +37,7 @@ export interface ParseResult {
   error?: string;
 }
 
-export interface HeadNodeData {
+export interface HeadNodeData extends Record<string, unknown> {
   playName: string;
   playbookFile: string;
   playbookId: string;
@@ -47,7 +47,7 @@ export interface HeadNodeData {
   hosts?: string | string[];
   become?: boolean;
   becomeUser?: string;
-  vars?: Record<string, any>;
+  vars?: Record<string, unknown>;
   tags?: string[];
   gather_facts?: boolean;
 
@@ -65,7 +65,7 @@ export interface HeadNode {
   hosts?: string | string[];
   become?: boolean;
   becomeUser?: string;
-  vars?: Record<string, any>;
+  vars?: Record<string, unknown>;
   tags?: string[];
   gather_facts?: boolean;
 }

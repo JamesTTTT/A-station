@@ -7,12 +7,12 @@ import {
 } from "@/components";
 
 import type {FormEvent} from "react";
-import type {LoginRequest} from "@/types";
+import type {RegisterRequest} from "@/types";
 import {GithubIcon} from "lucide-react";
 
 interface LoginFieldsProps {
-  registerFormData: LoginRequest;
-  setRegisterFormData: React.Dispatch<React.SetStateAction<LoginRequest>>;
+  registerFormData: RegisterRequest;
+  setRegisterFormData: React.Dispatch<React.SetStateAction<RegisterRequest>>;
   handleSubmit?: (e: FormEvent<HTMLFormElement>) => void;
 }
 
@@ -48,7 +48,7 @@ export const RegisterFields = ({
           <Input
             value={registerFormData.email}
             onChange={(e) =>
-              registerFormData((prev) => ({...prev, email: e.target.value}))
+              setRegisterFormData((prev) => ({...prev, email: e.target.value}))
             }
             id="email"
             type="email"

@@ -35,7 +35,7 @@ export const Canvas = () => {
     if (selectedPlaybook?.yaml_content) {
       loadFromYAML(selectedPlaybook.yaml_content);
     }
-  }, [selectedPlaybook?.id, loadFromYAML]);
+  }, [selectedPlaybook?.id, selectedPlaybook?.yaml_content, loadFromYAML]);
 
   const proOptions = { hideAttribution: true };
   return (
