@@ -23,6 +23,7 @@ interface PlaybookStore {
   updateDraft: (yamlContent: string) => void;
   savePlaybook: (
     authToken: string,
+    workspaceId: string,
   ) => Promise<{ success: boolean; error?: string }>;
   deletePlaybook: (
     workspaceId: string,
@@ -100,10 +101,15 @@ export const usePlaybookStore = create<PlaybookStore>()(
         set({ draftChanges: yamlContent, saveStatus: "idle" });
       },
 
-      savePlaybook: async (authToken: string) => {
+      savePlaybook: async (authToken: string, workspaceId: string) => {
         const state = get();
 
-        if (!state.selectedPlaybookId || !state.draftChanges || !authToken) {
+        if (
+          !state.selectedPlaybookId ||
+          !state.draftChanges ||
+          !authToken ||
+          !workspaceId
+        ) {
           return { success: false, error: "Missing required data" };
         }
 
@@ -114,6 +120,7 @@ export const usePlaybookStore = create<PlaybookStore>()(
             state.selectedPlaybookId,
             { yaml_content: state.draftChanges },
             authToken,
+            workspaceId,
           );
 
           if (result.success) {
@@ -135,6 +142,9 @@ export const usePlaybookStore = create<PlaybookStore>()(
             saveStatus: "error",
             saveError: "Failed to save playbook. Your changes are preserved.",
           });
+          setTimeout(() => {
+            set({ saveStatus: "idle", saveError: null });
+          }, 5000);
           return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",

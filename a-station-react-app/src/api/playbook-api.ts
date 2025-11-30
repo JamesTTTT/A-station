@@ -1,11 +1,16 @@
-import type { ApiResult, PlaybookCreate, PlaybookRead, PlaybookUpdate } from "@/types";
+import type {
+  ApiResult,
+  PlaybookCreate,
+  PlaybookRead,
+  PlaybookUpdate,
+} from "@/types";
 
 const baseUrl = import.meta.env.VITE_BASE_URL;
 
 export const createPlaybook = async (
   workspaceId: string,
   playbookData: PlaybookCreate,
-  accessToken: string
+  accessToken: string,
 ): Promise<ApiResult<PlaybookRead>> => {
   try {
     const response = await fetch(
@@ -18,7 +23,7 @@ export const createPlaybook = async (
         },
         credentials: "include",
         body: JSON.stringify(playbookData),
-      }
+      },
     );
 
     if (response.ok) {
@@ -36,7 +41,7 @@ export const createPlaybook = async (
 
 export const getPlaybooks = async (
   workspaceId: string,
-  accessToken: string
+  accessToken: string,
 ): Promise<ApiResult<PlaybookRead[]>> => {
   try {
     const response = await fetch(
@@ -48,7 +53,7 @@ export const getPlaybooks = async (
           Authorization: `Bearer ${accessToken}`,
         },
         credentials: "include",
-      }
+      },
     );
 
     if (response.ok) {
@@ -67,18 +72,22 @@ export const getPlaybooks = async (
 export const updatePlaybook = async (
   playbookId: string,
   playbookData: PlaybookUpdate,
-  accessToken: string
+  accessToken: string,
+  workspaceId: string,
 ): Promise<ApiResult<PlaybookRead>> => {
   try {
-    const response = await fetch(`${baseUrl}/playbooks/${playbookId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
+    const response = await fetch(
+      `${baseUrl}/workspaces/${workspaceId}/playbooks/${playbookId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: "include",
+        body: JSON.stringify(playbookData),
       },
-      credentials: "include",
-      body: JSON.stringify(playbookData),
-    });
+    );
 
     if (response.ok) {
       const data = await response.json();
@@ -96,7 +105,7 @@ export const updatePlaybook = async (
 export const deletePlaybook = async (
   workspaceId: string,
   playbookId: string,
-  accessToken: string
+  accessToken: string,
 ): Promise<ApiResult<{ message: string }>> => {
   try {
     const response = await fetch(
@@ -108,7 +117,7 @@ export const deletePlaybook = async (
           Authorization: `Bearer ${accessToken}`,
         },
         credentials: "include",
-      }
+      },
     );
 
     if (response.ok) {
