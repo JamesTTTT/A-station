@@ -1,10 +1,14 @@
 import { Handle, Position } from "@xyflow/react";
-import type { NodeProps } from "@xyflow/react";
 import type { TaskNodeData } from "@/types/nodes";
 import { cn } from "@/lib/utils";
 import { Check, CircleX, RefreshCcw, SkipForward } from "lucide-react";
 
-export const SimpleTaskNode = ({ data, selected }: NodeProps<TaskNodeData>) => {
+interface SimpleTaskNodeProps {
+  data: TaskNodeData;
+  selected: boolean;
+}
+
+export const SimpleTaskNode = ({ data, selected }: SimpleTaskNodeProps) => {
   // State-based styling
   const getStateStyles = () => {
     switch (data.state) {

@@ -122,7 +122,7 @@ export const useJobExecution = (options: UseJobExecutionOptions = {}) => {
           break;
 
         case "playbook_on_play_start":
-          play.current = event.event_data.play;
+          play.current = event.event_data.play as string;
           if (event.event_data.play) {
             useCanvasStore
               .getState()

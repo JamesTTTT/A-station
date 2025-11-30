@@ -54,7 +54,7 @@ export const useCanvasStore = create<CanvasStore>()(
 
       onNodesChange: (changes) => {
         set({
-          nodes: applyNodeChanges(changes, get().nodes) as Node<TaskNodeData>[],
+          nodes: applyNodeChanges(changes, get().nodes) as Node<TaskNodeData | HeadNodeData>[],
         });
       },
 
