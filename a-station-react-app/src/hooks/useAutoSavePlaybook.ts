@@ -28,6 +28,7 @@ export const useAutoSavePlaybook = (options: UseAutoSaveOptions = {}) => {
   const savePlaybook = usePlaybookStore((state) => state.savePlaybook);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
 
   useEffect(() => {
@@ -51,7 +52,14 @@ export const useAutoSavePlaybook = (options: UseAutoSaveOptions = {}) => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [enabled, draftChanges, selectedPlaybookId, token, debounceMs]);
+  }, [
+    enabled,
+    draftChanges,
+    selectedPlaybookId,
+    token,
+    debounceMs,
+    selectedWorkspace,
+  ]);
 
   const attemptSave = async () => {
     if (!token || !selectedWorkspace?.id) return;
@@ -60,17 +68,21 @@ export const useAutoSavePlaybook = (options: UseAutoSaveOptions = {}) => {
 
     if (!result.success && attemptsRef.current < maxRetries) {
       attemptsRef.current++;
-      setTimeout(attemptSave, retryDelayMs);
+      retryTimeoutRef.current = setTimeout(attemptSave, retryDelayMs);
     } else {
       attemptsRef.current = 0;
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (draftChanges && token && selectedWorkspace?.id) {
-        savePlaybook(token, selectedWorkspace.id);
-      }
-    };
-  }, []);
+  // Adds too much complexity for now; can be re-added if needed
+  // useEffect(() => {
+  //   return () => {
+  //     if (retryTimeoutRef.current) {
+  //       clearTimeout(retryTimeoutRef.current);
+  //     }
+  //     if (draftChanges && token && selectedWorkspace?.id) {
+  //       savePlaybook(token, selectedWorkspace.id);
+  //     }
+  //   };
+  // }, [draftChanges, token, selectedWorkspace?.id, savePlaybook]);
 };
