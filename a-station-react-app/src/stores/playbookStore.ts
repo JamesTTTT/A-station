@@ -104,7 +104,12 @@ export const usePlaybookStore = create<PlaybookStore>()(
       savePlaybook: async (authToken: string, workspaceId: string) => {
         const state = get();
 
-        if (!state.selectedPlaybookId || !state.draftChanges || !authToken) {
+        if (
+          !state.selectedPlaybookId ||
+          !state.draftChanges ||
+          !authToken ||
+          !workspaceId
+        ) {
           return { success: false, error: "Missing required data" };
         }
 
