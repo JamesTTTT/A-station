@@ -1,28 +1,37 @@
 import { useEffect, useRef } from "react";
 import { usePlaybookStore } from "@/stores/playbookStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 
 interface UseAutoSaveOptions {
+  enabled?: boolean;
   debounceMs?: number;
   maxRetries?: number;
   retryDelayMs?: number;
 }
 
 export const useAutoSavePlaybook = (options: UseAutoSaveOptions = {}) => {
-  const { debounceMs = 3000, maxRetries = 1, retryDelayMs = 500 } = options;
+  const {
+    enabled = true,
+    debounceMs = 3000,
+    maxRetries = 1,
+    retryDelayMs = 500,
+  } = options;
 
   const token = useAuthStore((state) => state.token);
   const draftChanges = usePlaybookStore((state) => state.draftChanges);
   const selectedPlaybookId = usePlaybookStore(
     (state) => state.selectedPlaybookId,
   );
+  const { selectedWorkspace } = useWorkspaceStore();
+
   const savePlaybook = usePlaybookStore((state) => state.savePlaybook);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptsRef = useRef(0);
 
   useEffect(() => {
-    if (!draftChanges || !selectedPlaybookId || !token) {
+    if (!enabled || !draftChanges || !selectedPlaybookId || !token) {
       return;
     }
 
@@ -42,12 +51,12 @@ export const useAutoSavePlaybook = (options: UseAutoSaveOptions = {}) => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [draftChanges, selectedPlaybookId, token, debounceMs]);
+  }, [enabled, draftChanges, selectedPlaybookId, token, debounceMs]);
 
   const attemptSave = async () => {
-    if (!token) return;
+    if (!token || !selectedWorkspace?.id) return;
 
-    const result = await savePlaybook(token);
+    const result = await savePlaybook(token, selectedWorkspace.id);
 
     if (!result.success && attemptsRef.current < maxRetries) {
       attemptsRef.current++;
@@ -59,8 +68,8 @@ export const useAutoSavePlaybook = (options: UseAutoSaveOptions = {}) => {
 
   useEffect(() => {
     return () => {
-      if (draftChanges && token) {
-        savePlaybook(token);
+      if (draftChanges && token && selectedWorkspace?.id) {
+        savePlaybook(token, selectedWorkspace.id);
       }
     };
   }, []);
