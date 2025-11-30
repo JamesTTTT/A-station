@@ -1,0 +1,71 @@
+---
+# Test Playbook - Demonstrates All Execution States
+# This playbook will show: running, success, failed, and skipped states
+
+- name: State Demonstration Playbook
+  hosts: localhost
+  gather_facts: yes
+  connection: local
+
+  vars:
+    skip_condition: false
+    fail_condition: true
+
+  tasks:
+    # Task 1: SUCCESS - Simple debug task (will succeed)
+    - name: Task 1 - This will succeed
+      debug:
+        msg: "This is a successful task!"
+
+    # Task 2: SUCCESS - Set a fact (will succeed)
+    - name: Task 2 - Setting a variable
+      set_fact:
+        test_variable: "Hello from Ansible"
+
+    # Task 3: SUCCESS - Another debug (will succeed)
+    - name: Task 3 - Display the variable
+      debug:
+        msg: "Variable value is {{ test_variable }}"
+
+    # Task 4: SKIPPED - Conditional task that won't run
+    - name: Task 4 - This will be skipped
+      debug:
+        msg: "You shouldn't see this"
+      when: skip_condition | bool
+
+    # Task 5: SUCCESS - Checking system info
+    - name: Task 5 - Check operating system
+      debug:
+        msg: "Running on {{ ansible_os_family }}"
+
+    # Task 6: SKIPPED - Another skipped task
+    - name: Task 6 - Another skipped task
+      command: echo "This won't run"
+      when: 1 == 2
+
+    # Task 7: SUCCESS - Create a temporary file
+    - name: Task 7 - Create temp file
+      file:
+        path: /tmp/ansible-test-{{ ansible_date_time.epoch }}
+        state: touch
+
+    # Task 8: FAILED - This will intentionally fail
+    - name: Task 8 - This will fail intentionally
+      fail:
+        msg: "This is a deliberate failure to test the failed state"
+      ignore_errors: yes
+
+    # Task 9: SUCCESS - This runs after the failed task
+    - name: Task 9 - Continue after failure
+      debug:
+        msg: "This task runs even after the previous failure"
+
+    # Task 10: FAILED - Command that doesn't exist
+    - name: Task 10 - Another failure example
+      command: /bin/nonexistent-command-that-will-fail
+      ignore_errors: yes
+
+    # Task 11: SUCCESS - Final successful task
+    - name: Task 11 - Final task succeeds
+      debug:
+        msg: "Playbook execution complete! Check your canvas for different states."

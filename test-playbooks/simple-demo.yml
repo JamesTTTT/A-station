@@ -1,0 +1,43 @@
+---
+# Simple Test Playbook - Quick state demonstration
+# Focuses on the most common states: success, failed, skipped
+
+- name: Simple State Demo
+  hosts: localhost
+  gather_facts: no
+  connection: local
+
+  tasks:
+    - name: Success 1 - Hello World
+      debug:
+        msg: "Hello from Ansible!"
+
+    - name: Success 2 - Simple math
+      debug:
+        msg: "2 + 2 = {{ 2 + 2 }}"
+
+    - name: Skipped 1 - Never runs
+      debug:
+        msg: "This is skipped"
+      when: false
+
+    - name: Success 3 - Still going
+      debug:
+        msg: "Still running successfully"
+
+    - name: Failed 1 - Intentional failure
+      fail:
+        msg: "Testing failure state"
+      ignore_errors: yes
+
+    - name: Success 4 - Recovery
+      debug:
+        msg: "Continuing after failure"
+
+    - name: Skipped 2 - Another skip
+      command: echo "Skip me"
+      when: 1 > 2
+
+    - name: Success 5 - Complete
+      debug:
+        msg: "All done!"

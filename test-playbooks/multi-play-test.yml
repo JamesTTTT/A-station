@@ -1,0 +1,103 @@
+---
+- name: Database Setup Play
+  hosts: localhost
+  gather_facts: false
+  tags:
+    - database
+    - setup
+  tasks:
+    - name: Create database directory
+      ansible.builtin.file:
+        path: /tmp/test-db
+        state: directory
+        mode: '0755'
+
+    - name: Check database connection
+      ansible.builtin.debug:
+        msg: "Database connection successful"
+
+    - name: Initialize database schema
+      ansible.builtin.copy:
+        content: "CREATE TABLE users (id INT, name VARCHAR(100));"
+        dest: /tmp/test-db/schema.sql
+
+- name: Web Server Configuration Play
+  hosts: localhost
+  gather_facts: true
+  become: false
+  tags:
+    - webserver
+    - config
+  vars:
+    web_port: 8080
+    web_root: /var/www/html
+  tasks:
+    - name: Install web server packages
+      ansible.builtin.debug:
+        msg: "Installing nginx on port {{ web_port }}"
+
+    - name: Create web root directory
+      ansible.builtin.file:
+        path: /tmp/web-root
+        state: directory
+        mode: '0755'
+
+    - name: Deploy index page
+      ansible.builtin.copy:
+        content: "<html><body><h1>Welcome</h1></body></html>"
+        dest: /tmp/web-root/index.html
+
+    - name: Configure virtual host
+      ansible.builtin.debug:
+        msg: "Virtual host configured for {{ web_root }}"
+
+- name: Application Deployment Play
+  hosts: localhost
+  gather_facts: false
+  become: false
+  tags:
+    - application
+    - deploy
+  vars:
+    app_version: "2.1.0"
+    app_env: production
+  tasks:
+    - name: Pull application code
+      ansible.builtin.debug:
+        msg: "Pulling version {{ app_version }} from repository"
+
+    - name: Install dependencies
+      ansible.builtin.debug:
+        msg: "Installing application dependencies"
+
+    - name: Run database migrations
+      ansible.builtin.debug:
+        msg: "Running migrations for {{ app_env }} environment"
+
+    - name: Start application service
+      ansible.builtin.debug:
+        msg: "Application started successfully"
+
+- name: Monitoring Setup Play
+  hosts: localhost
+  gather_facts: false
+  become: false
+  tags:
+    - monitoring
+  tasks:
+    - name: Configure monitoring agent
+      ansible.builtin.debug:
+        msg: "Monitoring agent configured"
+
+    - name: Set up health checks
+      ansible.builtin.debug:
+        msg: "Health checks enabled"
+
+    - name: Create alert rules
+      ansible.builtin.copy:
+        content: |
+          alerts:
+            - cpu_high
+            - memory_low
+            - disk_full
+        dest: /tmp/alert-rules.yml

@@ -1,0 +1,45 @@
+---
+# Advanced Test Playbook - Demonstrates UNREACHABLE state
+# This playbook attempts to connect to an unreachable host
+
+- name: Unreachable Host Demonstration
+  hosts: localhost
+  gather_facts: no
+  connection: local
+
+  tasks:
+    - name: Task 1 - Starting on localhost
+      debug:
+        msg: "Starting playbook on localhost"
+
+    - name: Task 2 - This will succeed
+      debug:
+        msg: "This task succeeds"
+
+# This play attempts to reach a non-existent host
+- name: Attempting unreachable host
+  hosts: 192.0.2.1  # This is a TEST-NET IP that should be unreachable
+  gather_facts: no
+  connection: ssh
+  vars:
+    ansible_connection_timeout: 3
+    ansible_ssh_timeout: 3
+
+  tasks:
+    - name: Task 3 - This will be unreachable
+      ping:
+
+    - name: Task 4 - This won't run (previous unreachable)
+      debug:
+        msg: "You won't see this if host is unreachable"
+
+# Back to localhost for final tasks
+- name: Continue on localhost
+  hosts: localhost
+  gather_facts: no
+  connection: local
+
+  tasks:
+    - name: Task 5 - Final task on localhost
+      debug:
+        msg: "Playbook completed (if error handling allows)"
