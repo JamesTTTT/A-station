@@ -11,7 +11,7 @@ export { DashboardTopBar } from "./DashboardTopBar.tsx";
 export { Canvas } from "./Canvas/Canvas.tsx";
 export { SecondaryToolbar } from "./ToolBar/SecondaryToolbar.tsx";
 export { DashboardNavigation } from "./DashboardNavigation.tsx";
-export { YamlCodeViewer } from "./ToolBar/YamlCodeViewer.tsx";
+export { YamlCodeViewer } from "./ToolBar/YamlCodeViewer";
 export { ThemeToggle } from "./ThemeToggle";
 export { DeletePlaybook } from "./Modals/DeletePlaybook";
 export { CreatePlaybook } from "./Modals/CreatePlaybook";
