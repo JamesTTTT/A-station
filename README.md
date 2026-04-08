@@ -39,23 +39,20 @@ flowchart TB
         Local["Local Dirs"]:::source
     end
 
-    subgraph Workers["Ansible Workers · ansible-runner"]
-        W15["2.15"]:::tertiary
-        W16["2.16"]:::tertiary
-        W17["2.17"]:::tertiary
-    end
+    W15["Worker 2.15"]:::tertiary
+    W16["Worker 2.16"]:::tertiary
+    W17["Worker 2.17"]:::tertiary
 
     React -->|REST| API
     React <-.->|WebSocket| Redis
 
-    SourceAPI -->|"clone / pull"| Git
-    SourceAPI -->|"read"| Local
+    SourceAPI --> Git & Local
     API <--> PG
-    JobAPI -->|"dispatch"| Redis
+    JobAPI -->|dispatch| Redis
 
-    Redis -->|"versioned queues"| Workers
-    Workers -->|"read playbooks & inventory"| Sources
-    Workers -->|"stream events"| Redis
+    Redis --> W15 & W16 & W17
+    W15 & W16 & W17 --> Sources
+    W15 & W16 & W17 -.->|stream events| Redis
 ```
 
 ## Core Concepts
