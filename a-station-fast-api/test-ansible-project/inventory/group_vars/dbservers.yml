@@ -1,0 +1,11 @@
+---
+db_port: 5432
+db_name: app_production
+db_user: app_user
+max_connections: 200
+shared_buffers: 256MB
+effective_cache_size: 768MB
+
+backup_enabled: true
+backup_schedule: "0 2 * * *"
+backup_retention_days: 30

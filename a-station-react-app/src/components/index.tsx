@@ -13,5 +13,4 @@ export { SecondaryToolbar } from "./ToolBar/SecondaryToolbar";
 export { DashboardNavigation } from "./DashboardNavigation";
 export { YamlCodeViewer } from "./ToolBar/YamlCodeViewer";
 export { ThemeToggle } from "./ThemeToggle";
-export { DeletePlaybook } from "./Modals/DeletePlaybook";
-export { CreatePlaybook } from "./Modals/CreatePlaybook";
+export { AddSource } from "./Modals/AddSource";

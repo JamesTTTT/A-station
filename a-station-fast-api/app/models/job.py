@@ -1,27 +1,31 @@
-from sqlalchemy import String, ForeignKey, Text, DateTime
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import Optional, TYPE_CHECKING
-from datetime import datetime
-from .base import TimestampedUUIDModel
 import uuid
-from .playbook import Playbook
+from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import String, ForeignKey, Text, DateTime
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import TimestampedUUIDModel
 from .user import User
-from .workspace import Workspace
+
 
 class Job(TimestampedUUIDModel):
     __tablename__ = "jobs"
 
-    playbook_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("playbooks.id"))
+    workspace_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workspaces.id"), nullable=False)
+    source_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("project_sources.id"), nullable=False)
+    playbook_path: Mapped[str] = mapped_column(String, nullable=False)
+    inventory_path: Mapped[str] = mapped_column(String, nullable=False)
+    extra_vars: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     triggered_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-
     status: Mapped[str] = mapped_column(String(20))
     log_output: Mapped[Optional[str]] = mapped_column(Text)
+    ansible_version: Mapped[str] = mapped_column(String(10))
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
-    playbook: Mapped["Playbook"] = relationship("Playbook", back_populates="jobs")
-
     created_by: Mapped["User"] = relationship("User", foreign_keys=[triggered_by_id])
-    ansible_version: Mapped[str] = mapped_column(String(10))
+
 
 class JobStatus:
     PENDING = "PENDING"

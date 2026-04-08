@@ -1,0 +1,29 @@
+---
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+
+dns_servers:
+  - 8.8.8.8
+  - 8.8.4.4
+
+timezone: UTC
+locale: en_US.UTF-8
+
+common_packages:
+  - curl
+  - wget
+  - vim
+  - htop
+  - net-tools
+  - unzip
+
+firewall_allowed_ports:
+  - 22
+  - 80
+  - 443
+
+app_name: a-station
+app_version: "1.0.0"
+deploy_user: deploy
+deploy_group: deploy

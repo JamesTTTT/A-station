@@ -1,0 +1,23 @@
+[webservers]
+web1.example.com ansible_host=10.0.1.10 ansible_port=22
+web2.example.com ansible_host=10.0.1.11 ansible_port=22
+
+[dbservers]
+db1.example.com ansible_host=10.0.2.10 ansible_port=22
+db2.example.com ansible_host=10.0.2.11 ansible_port=22
+
+[loadbalancers]
+lb1.example.com ansible_host=10.0.0.10
+
+[monitoring]
+grafana.example.com ansible_host=10.0.3.10
+
+[production:children]
+webservers
+dbservers
+loadbalancers
+monitoring
+
+[production:vars]
+ansible_user=deploy
+env=production

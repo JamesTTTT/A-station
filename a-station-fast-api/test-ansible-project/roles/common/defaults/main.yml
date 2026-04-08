@@ -1,0 +1,4 @@
+---
+common_motd_enabled: true
+common_fail2ban_enabled: true
+common_ufw_enabled: true

@@ -1,0 +1,42 @@
+---
+- name: Deploy application to web servers
+  hosts: webservers
+  become: yes
+  vars:
+    app_repo: "https://github.com/example/app.git"
+    app_branch: main
+    app_dest: "/opt/{{ app_name }}"
+
+  tasks:
+    - name: Ensure deploy directory exists
+      file:
+        path: "{{ app_dest }}"
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_group }}"
+
+    - name: Clone/update application repository
+      git:
+        repo: "{{ app_repo }}"
+        dest: "{{ app_dest }}"
+        version: "{{ app_branch }}"
+        force: yes
+      become_user: "{{ deploy_user }}"
+
+    - name: Install application dependencies
+      pip:
+        requirements: "{{ app_dest }}/requirements.txt"
+        virtualenv: "{{ app_dest }}/venv"
+      become_user: "{{ deploy_user }}"
+
+    - name: Restart application service
+      service:
+        name: "{{ app_name }}"
+        state: restarted
+
+    - name: Verify application is responding
+      uri:
+        url: "http://localhost:{{ http_port }}/health"
+        status_code: 200
+      retries: 5
+      delay: 3

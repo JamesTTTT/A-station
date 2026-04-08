@@ -1,6 +1,7 @@
 # --- Web Framework ---
 fastapi
 uvicorn[standard]
+scalar-fastapi
 
 # --- Database & ORM ---
 sqlalchemy
@@ -8,6 +9,7 @@ psycopg2-binary
 alembic
 
 # --- Data Validation & Settings ---
+pyyaml
 pydantic
 pydantic-settings
 python-dotenv

@@ -2,8 +2,7 @@ from .base import Base, TimestampedUUIDModel
 from .user import User
 from .workspace import Workspace
 from .workspace_member import WorkspaceMember
-from .inventory import Credential, Variable, Host, InventoryGroup
-from .playbook import Playbook
+from .project_source import ProjectSource
 from .job import Job
 from .refresh_token import RefreshToken
 
@@ -13,11 +12,7 @@ __all__ = [
     "User",
     "Workspace",
     "WorkspaceMember",
-    "Credential",
-    "Variable",
-    "Host",
-    "InventoryGroup",
-    "Playbook",
+    "ProjectSource",
     "Job",
     "RefreshToken",
 ]

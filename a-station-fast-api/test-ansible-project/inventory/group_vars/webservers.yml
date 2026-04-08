@@ -1,0 +1,9 @@
+---
+http_port: 80
+https_port: 443
+max_connections: 1024
+document_root: /var/www/html
+server_name: "{{ inventory_hostname }}"
+
+nginx_worker_processes: auto
+nginx_worker_connections: 1024

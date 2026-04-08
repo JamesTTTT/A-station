@@ -4,8 +4,9 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-RUN apt-get update && apt-get install -y netcat-traditional && \
+RUN apt-get update && apt-get install -y netcat-traditional git openssh-client && \
     rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /root/.ssh && ssh-keyscan github.com gitlab.com bitbucket.org >> /root/.ssh/known_hosts
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./app ./app

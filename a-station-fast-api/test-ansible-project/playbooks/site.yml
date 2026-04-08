@@ -1,0 +1,30 @@
+---
+- name: Apply common configuration to all nodes
+  hosts: production
+  become: yes
+  roles:
+    - common
+
+- name: Configure web servers
+  hosts: webservers
+  become: yes
+  roles:
+    - webserver
+
+- name: Configure database servers
+  hosts: dbservers
+  become: yes
+  tasks:
+    - name: Install PostgreSQL
+      apt:
+        name:
+          - postgresql
+          - postgresql-contrib
+          - python3-psycopg2
+        state: present
+
+    - name: Ensure PostgreSQL is started
+      service:
+        name: postgresql
+        state: started
+        enabled: yes
