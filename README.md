@@ -23,50 +23,39 @@ flowchart TB
     classDef tertiary fill:#f5f5f7,stroke:#9ca4e8,stroke-width:2px,color:#333333
     classDef source fill:#e8f5e9,stroke:#66bb6a,stroke-width:2px,color:#1b5e20
 
-    subgraph Client["Browser"]
-        React["**React App**<br/>DAG Visualization + File Browser"]:::secondary
-    end
+    React["**React App**<br/>DAG Visualization · File Browser"]:::secondary
 
-    subgraph API_Layer["FastAPI — Port 8000"]
+    subgraph API["FastAPI"]
         Auth["Auth & Workspaces"]:::primary
-        SourceAPI["Source Management<br/>CRUD · Sync · File Browser · Inventory Parser"]:::primary
-        JobAPI["Job Execution<br/>Create · Status · History"]:::primary
+        SourceAPI["Sources<br/>CRUD · Sync · Browse · Inventory"]:::primary
+        JobAPI["Jobs<br/>Execute · Status · History"]:::primary
     end
 
-    subgraph Data["Data Layer"]
-        PG[("**PostgreSQL**<br/>Users · Workspaces<br/>ProjectSources · Jobs")]:::secondary
-        Redis[("**Valkey**<br/>Task Queue · Pub/Sub")]:::secondary
+    PG[("**PostgreSQL**")]:::secondary
+    Redis[("**Valkey**")]:::secondary
+
+    subgraph Sources["Project Sources"]
+        Git["Git Clones"]:::source
+        Local["Local Dirs"]:::source
     end
 
-    subgraph Sources["Project Sources on Disk"]
-        GitClone["**Git Clones**<br/>cloned to /data/a-station/sources/"]:::source
-        LocalDir["**Local Directories**<br/>mounted at /data/ansible-projects/"]:::source
+    subgraph Workers["Ansible Workers · ansible-runner"]
+        W15["2.15"]:::tertiary
+        W16["2.16"]:::tertiary
+        W17["2.17"]:::tertiary
     end
 
-    subgraph Workers["Celery Workers"]
-        W15["**Ansible 2.15**<br/>ansible-runner"]:::tertiary
-        W16["**Ansible 2.16**<br/>ansible-runner"]:::tertiary
-        W17["**Ansible 2.17**<br/>ansible-runner"]:::tertiary
-    end
+    React -->|REST| API
+    React <-.->|WebSocket| Redis
 
-    React -->|REST| Auth
-    React -->|REST| SourceAPI
-    React -->|REST| JobAPI
-    React <-.->|WebSocket<br/>live events| Redis
+    SourceAPI -->|"clone / pull"| Git
+    SourceAPI -->|"read"| Local
+    API <--> PG
+    JobAPI -->|"dispatch"| Redis
 
-    SourceAPI -->|"git clone / pull"| GitClone
-    SourceAPI -->|"read files"| LocalDir
-    SourceAPI <--> PG
-
-    JobAPI -->|"create job record"| PG
-    JobAPI -->|"dispatch task"| Redis
-
-    Redis -->|"versioned queues"| W15
-    Redis -->|"versioned queues"| W16
-    Redis -->|"versioned queues"| W17
-
-    W15 & W16 & W17 -->|"read playbooks<br/>& inventory"| Sources
-    W15 & W16 & W17 -->|"stream events"| Redis
+    Redis -->|"versioned queues"| Workers
+    Workers -->|"read playbooks & inventory"| Sources
+    Workers -->|"stream events"| Redis
 ```
 
 ## Core Concepts
