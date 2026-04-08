@@ -4,15 +4,6 @@ A lightweight, visual execution layer for Ansible. Point it at your playbooks, r
 
 A-Station doesn't try to replace Ansible's native file-based workflow — it wraps it. Playbooks and inventory stay where they belong (in your repos, on your filesystem). A-Station handles **execution, visualization, and monitoring**.
 
-## Why not AWX?
-
-AWX is powerful but heavy — Django, Kubernetes-preferred, complex to deploy. A-Station is a focused alternative:
-
-- **Simple stack**: FastAPI + React + Celery. Runs with Docker Compose.
-- **Live DAG visualization**: Watch playbook execution as a graph with real-time node coloring via React Flow.
-- **Multi-version workers**: Run jobs against Ansible 2.15, 2.16, or 2.17 from the same interface.
-- **No inventory emulation**: Ansible reads your inventory natively. No round-tripping through a database.
-
 ## Architecture
 
 ```mermaid
