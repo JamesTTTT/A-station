@@ -1,81 +1,59 @@
 import ansible_runner
-import tempfile
-import os
 from pathlib import Path
-import yaml
 import logging
 
 logger = logging.getLogger(__name__)
 
+ARTIFACT_BASE_DIR = "/tmp/ansible-artifacts"
+
+
 class AnsibleExecutor:
 
-    def __init__(self,
-                 job_id: str,
-                 playbook_yaml: str,
-                 inventory: str,
-                 extra_vars: dict = None
-                 ):
+    def __init__(
+        self,
+        job_id: str,
+        source_path: str,
+        playbook_path: str,
+        inventory_path: str,
+        extra_vars: dict = None,
+    ):
         self.job_id = job_id
-        self.playbook_yaml = playbook_yaml
-        self.inventory = inventory
+        self.source_path = Path(source_path)
+        self.playbook_path = playbook_path
+        self.inventory_path = inventory_path
         self.extra_vars = extra_vars or {}
-
-        self.work_dir = Path(tempfile.mkdtemp(prefix=f"job_{job_id}_"))
-        self.setup_work_directory()
-
-    def setup_work_directory(self):
-        """
-        Create ansible-runner directory structure
-        """
-        (self.work_dir / "inventory").mkdir()
-        (self.work_dir / "project").mkdir()
-        (self.work_dir / "env").mkdir()
-
-        playbook_path = self.work_dir / "project" /"playbook.yml"
-        playbook_path.write_text(self.playbook_yaml)
-
-        inventory_path = self.work_dir / "inventory" / "hosts"
-        inventory_path.write_text(self.inventory)
-
-
-        if self.extra_vars:
-            extravars_path = self.work_dir / "env" / "extravars"
-            extravars_path.write_text(yaml.dump(self.extra_vars))
+        self.artifact_dir = Path(ARTIFACT_BASE_DIR) / job_id
+        self.artifact_dir.mkdir(parents=True, exist_ok=True)
 
     def run(self, event_callback=None):
-        """
-        Execute the playbook using ansible-runner
-        """
-        logger.info(f"Executing playbook in {self.work_dir}")
+        logger.info(f"Executing playbook {self.playbook_path} from {self.source_path}")
+
+        inventory_abs = str(self.source_path / self.inventory_path)
 
         runner = ansible_runner.interface.run(
-            private_data_dir=str(self.work_dir),
-            playbook=str(self.work_dir / "project" / "playbook.yml"),
-            inventory=str(self.work_dir / "inventory" / "hosts"),
-            extravars=self.extra_vars,
+            private_data_dir=str(self.source_path),
+            playbook=self.playbook_path,
+            inventory=inventory_abs,
+            extravars=self.extra_vars if self.extra_vars else None,
+            artifact_dir=str(self.artifact_dir),
             quiet=False,
             json_mode=True,
             event_handler=event_callback,
             cancel_callback=self.check_cancelled,
-            status_handler=self.status_handler
+            status_handler=self.status_handler,
         )
 
         logger.info(f"Playbook completed with status: {runner.status}, rc: {runner.rc}")
-
         return runner
 
-
     def check_cancelled(self):
-        #TODO: Check Redis for cancellation flag
+        # TODO: Check Redis for cancellation flag
         return False
 
     def status_handler(self, status_data, runner_config):
         logger.debug(f"Runner status: {status_data}")
 
     def get_final_summary(self, runner):
-        """
-        Extract final execution summary
-        """
         if runner.stats is None:
             return {
                 "ok": 0,
@@ -83,7 +61,7 @@ class AnsibleExecutor:
                 "failures": 0,
                 "skipped": 0,
                 "rescued": 0,
-                "ignored": 0
+                "ignored": 0,
             }
         return {
             "ok": runner.stats.get("ok", 0),
@@ -91,10 +69,10 @@ class AnsibleExecutor:
             "failures": runner.stats.get("failures", 0),
             "skipped": runner.stats.get("skipped", 0),
             "rescued": runner.stats.get("rescued", 0),
-            "ignored": runner.stats.get("ignored", 0)
+            "ignored": runner.stats.get("ignored", 0),
         }
 
     def cleanup(self):
         import shutil
-        if self.work_dir.exists():
-            shutil.rmtree(self.work_dir)
+        if self.artifact_dir.exists():
+            shutil.rmtree(self.artifact_dir)
