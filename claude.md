@@ -106,6 +106,11 @@ Would you like me to:
 4. The human knows their project best - ask questions
 5. When in doubt, discuss rather than implement
 
+## Git Commit Rules
+- **Never commit unless explicitly asked** — wait for the user to say "commit", "push", etc.
+- **No co-author lines** in commit messages
+- **Keep commits short** — one-line messages, non-verbose
+
 ## Quick Reference Commands
 - **"Read and analyze"** → Review code, provide insights
 - **"Bounce an idea"** → Collaborative discussion mode
