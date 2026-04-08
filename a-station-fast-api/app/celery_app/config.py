@@ -1,4 +1,5 @@
 import os
+from celery.schedules import crontab
 
 class CeleryConfig:
     """Celery configuration settings for the FastAPI client."""
@@ -37,6 +38,13 @@ class CeleryConfig:
         "interval_max": 0.2,
     }
 
+    beat_schedule = {
+        "cleanup-expired-tokens": {
+            "task": "tasks.cleanup_expired_tokens",
+            "schedule": crontab(hour=3, minute=0),
+        },
+    }
+
 
 # Dictionary format for easy import and use
 celery_config = {
@@ -55,4 +63,5 @@ celery_config = {
     "task_reject_on_worker_lost": CeleryConfig.task_reject_on_worker_lost,
     "task_publish_retry": CeleryConfig.task_publish_retry,
     "task_publish_retry_policy": CeleryConfig.task_publish_retry_policy,
+    "beat_schedule": CeleryConfig.beat_schedule,
 }

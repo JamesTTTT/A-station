@@ -11,6 +11,9 @@ services:
       - .env
     volumes:
       - ./app:/app/app
+      - ~/.ssh:/root/.ssh:ro
+      - ./test-ansible-project:/data/test-ansible-project:ro
+      - ~/ansible-projects:/data/ansible-projects
 
   db:
     image: postgres:17-alpine
@@ -30,6 +33,15 @@ services:
     volumes:
       - redis_data:/data
     command: valkey-server --appendonly yes
+
+  celery-beat:
+    build: .
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - .env
+    command: celery -A app.celery_app.tasks worker --beat --loglevel=info --concurrency=1 -Q celery
 
   worker-2-17:
     build:

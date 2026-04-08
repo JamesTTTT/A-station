@@ -1,0 +1,47 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install common packages
+  apt:
+    name: "{{ common_packages }}"
+    state: present
+
+- name: Set timezone
+  timezone:
+    name: "{{ timezone }}"
+
+- name: Configure NTP
+  template:
+    src: ntp.conf.j2
+    dest: /etc/ntp.conf
+  notify: restart ntp
+
+- name: Set MOTD
+  template:
+    src: motd.j2
+    dest: /etc/motd
+  when: common_motd_enabled
+
+- name: Create deploy user
+  user:
+    name: "{{ deploy_user }}"
+    group: "{{ deploy_group }}"
+    shell: /bin/bash
+    create_home: yes
+
+- name: Configure UFW defaults
+  ufw:
+    state: enabled
+    policy: deny
+  when: common_ufw_enabled
+
+- name: Allow SSH through firewall
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ firewall_allowed_ports }}"
+  when: common_ufw_enabled
