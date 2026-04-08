@@ -1,46 +1,56 @@
+import { Button } from "@/components/ui/button";
 import {
-  Checkbox, Label, Field,
+  Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-  FieldSeparator, Button, Input
-} from "@/components";
+  FieldSeparator,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import type { FormEvent } from "react";
+import type { RegisterRequest } from "@/types";
+import { GithubIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
-import type {FormEvent} from "react";
-import type {LoginRequest} from "@/types";
-import {GithubIcon} from "lucide-react";
-
-interface LoginFieldsProps {
-  registerFormData: LoginRequest;
-  setRegisterFormData: React.Dispatch<React.SetStateAction<LoginRequest>>;
+interface RegisterFieldsProps {
+  registerFormData: RegisterRequest;
+  setRegisterFormData: React.Dispatch<React.SetStateAction<RegisterRequest>>;
   handleSubmit?: (e: FormEvent<HTMLFormElement>) => void;
+  error?: string | null;
+  isLoading?: boolean;
 }
 
 export const RegisterFields = ({
-                                 registerFormData,
-                                 setRegisterFormData,
-                                 handleSubmit,
-                               }: LoginFieldsProps) => {
+  registerFormData,
+  setRegisterFormData,
+  handleSubmit,
+  error,
+  isLoading,
+}: RegisterFieldsProps) => {
   return (
-    <form className={"flex flex-col gap-6"} onSubmit={handleSubmit}>
+    <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
           <h1 className="text-2xl font-bold">Create an account</h1>
           <p className="text-muted-foreground text-sm text-balance">
-            Let's get started. Fill in the details below to create your account.
+            Fill in the details below to get started.
           </p>
         </div>
         <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <FieldLabel htmlFor="username">Username</FieldLabel>
           <Input
             value={registerFormData.username}
             onChange={(e) =>
-              setRegisterFormData((prev) => ({...prev, username: e.target.value}))
+              setRegisterFormData((prev) => ({
+                ...prev,
+                username: e.target.value,
+              }))
             }
             id="username"
             type="text"
-            placeholder="TheUser27"
+            placeholder="johndoe"
             required
+            disabled={isLoading}
           />
         </Field>
         <Field>
@@ -48,41 +58,53 @@ export const RegisterFields = ({
           <Input
             value={registerFormData.email}
             onChange={(e) =>
-              registerFormData((prev) => ({...prev, email: e.target.value}))
+              setRegisterFormData((prev) => ({
+                ...prev,
+                email: e.target.value,
+              }))
             }
             id="email"
             type="email"
             placeholder="m@example.com"
             required
+            disabled={isLoading}
           />
         </Field>
-        <div className="flex items-start gap-3">
-          <Checkbox id="terms-2" defaultChecked/>
-          <div className="grid gap-2">
-            <Label htmlFor="terms-2">Accept terms and conditions</Label>
-            <p className="text-muted-foreground text-sm">
-              By clicking this checkbox, you agree to the terms and conditions.
-            </p>
-          </div>
-          <Field>
-            <Button className="cursor-pointer" type="submit">
-              Sign Up
-            </Button>
-          </Field>
-          <FieldSeparator>Or signup with</FieldSeparator>
-          <Field>
-            <Button variant="outline" type="button" className="cursor-pointer">
-              <GithubIcon/>
-              Register with GitHub
-            </Button>
-            <FieldDescription className="text-center">
-              Don&apos;t have an account?{" "}
-              <a href="#" className="underline underline-offset-4">
-                Already have an account?
-              </a>
-            </FieldDescription>
-          </Field>
-        </div>
+        <Field>
+          <FieldLabel htmlFor="password">Password</FieldLabel>
+          <Input
+            value={registerFormData.password}
+            onChange={(e) =>
+              setRegisterFormData((prev) => ({
+                ...prev,
+                password: e.target.value,
+              }))
+            }
+            id="password"
+            type="password"
+            required
+            disabled={isLoading}
+          />
+        </Field>
+        {error && <p className="text-sm text-destructive text-center">{error}</p>}
+        <Field>
+          <Button className="cursor-pointer" type="submit" disabled={isLoading}>
+            {isLoading ? "Creating account..." : "Sign Up"}
+          </Button>
+        </Field>
+        <FieldSeparator>Or continue with</FieldSeparator>
+        <Field>
+          <Button variant="outline" type="button" className="cursor-pointer">
+            <GithubIcon />
+            Sign up with GitHub
+          </Button>
+          <FieldDescription className="text-center">
+            Already have an account?{" "}
+            <Link to="/login" className="underline underline-offset-4">
+              Log in
+            </Link>
+          </FieldDescription>
+        </Field>
       </FieldGroup>
     </form>
   );

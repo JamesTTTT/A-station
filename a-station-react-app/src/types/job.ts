@@ -1,7 +1,9 @@
 export interface JobCreate {
-  playbook_id: string;
-  ansible_version?: string;
-  inventory?: string;
+  workspace_id: string;
+  source_id: string;
+  playbook_path: string;
+  inventory_path: string;
+  ansible_version: string;
   extra_vars?: Record<string, unknown>;
 }
 

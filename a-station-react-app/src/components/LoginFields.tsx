@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import type { FormEvent } from "react";
 import type { LoginRequest } from "@/types";
 import { GithubIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 interface LoginFieldsProps {
   loginFormData: LoginRequest;
@@ -80,9 +81,9 @@ export const LoginFields = ({
           </Button>
           <FieldDescription className="text-center">
             Don&apos;t have an account?{" "}
-            <a href="#" className="underline underline-offset-4">
+            <Link to="/register" className="underline underline-offset-4">
               Sign up
-            </a>
+            </Link>
           </FieldDescription>
         </Field>
       </FieldGroup>
