@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useSourceStore } from "@/stores/sourceStore";
 import { useAuthStore } from "@/stores/authStore";
-import { useCanvasStore } from "@/stores/canvasStore";
 import { AddSource } from "@/components/Modals/AddSource";
 import { Button } from "@/components/ui";
 import {
@@ -15,6 +14,7 @@ import {
   HardDrive,
   Plus,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import type { FileTreeNode } from "@/types";
 
@@ -110,9 +110,8 @@ export const FileTree = () => {
     setActiveSource,
     selectFile,
     syncSource,
+    removeSource,
   } = useSourceStore();
-  const { loadFromYAML } = useCanvasStore();
-
   useEffect(() => {
     if (!selectedWorkspace || !token) return;
     fetchSources(selectedWorkspace.id, token);
@@ -124,14 +123,6 @@ export const FileTree = () => {
     if (!selectedWorkspace || !token || !activeSourceId) return;
 
     await selectFile(selectedWorkspace.id, activeSourceId, path, token);
-
-    // Load YAML files into canvas
-    if (isYamlFile(path)) {
-      const content = useSourceStore.getState().selectedFileContent;
-      if (content) {
-        loadFromYAML(content, path, activeSourceId);
-      }
-    }
   };
 
   const handleSync = async () => {
@@ -147,14 +138,31 @@ export const FileTree = () => {
       <div className="px-3 py-2 border-b border-border space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Source</h2>
-          <AddSource
-            workspaceId={selectedWorkspace.id}
-            trigger={
-              <Button className="flex items-center justify-center w-6 h-6 rounded bg-transparent hover:bg-accent transition-colors">
-                <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+          <div className="flex items-center gap-0.5">
+            {activeSourceId && (
+              <Button
+                className="flex items-center justify-center w-6 h-6 rounded bg-transparent hover:bg-destructive/10 transition-colors"
+                onClick={() => {
+                  if (!token || !activeSourceId) return;
+                  const source = sources.find((s) => s.id === activeSourceId);
+                  if (!source) return;
+                  if (!window.confirm(`Remove source "${source.name}"?`)) return;
+                  removeSource(selectedWorkspace.id, activeSourceId, token);
+                }}
+                title="Remove source"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
               </Button>
-            }
-          />
+            )}
+            <AddSource
+              workspaceId={selectedWorkspace.id}
+              trigger={
+                <Button className="flex items-center justify-center w-6 h-6 rounded bg-transparent hover:bg-accent transition-colors">
+                  <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+                </Button>
+              }
+            />
+          </div>
         </div>
 
         {sources.length > 0 && (
