@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   web:
@@ -12,8 +12,8 @@ services:
     volumes:
       - ./app:/app/app
       - ~/.ssh:/root/.ssh:ro
-      - ./test-ansible-project:/data/test-ansible-project:ro
       - ~/ansible-projects:/data/ansible-projects
+      - source_data:/data/a-station/sources
 
   db:
     image: postgres:17-alpine
@@ -54,7 +54,9 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
     volumes:
       - ../ansible-worker/worker:/worker/worker
+      - source_data:/data/a-station/sources:ro
 
 volumes:
   postgres_data:
   redis_data:
+  source_data:
