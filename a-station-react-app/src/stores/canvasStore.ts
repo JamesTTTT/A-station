@@ -7,20 +7,44 @@ import {
   applyEdgeChanges,
 } from "@xyflow/react";
 import type { OnNodesChange, OnEdgesChange, OnConnect } from "@xyflow/react";
-import type { TaskNodeData, ExecutionState, HeadNodeData } from "@/types/nodes";
+import type {
+  TaskNodeData,
+  HeadNodeData,
+  TaskGroupNodeData,
+  RoleNodeData,
+  ExecutionState,
+  AnyNodeData,
+  ViewMode,
+  ParseResult,
+  TaskGroupType,
+} from "@/types/nodes";
 import { playbookParser } from "@/services/yaml-parser";
 
-interface CanvasStore {
-  // State
-  nodes: Node<TaskNodeData | HeadNodeData>[];
-  edges: Edge[];
+// Layout constants
+const HEADNODE_HEIGHT = 200;
+const TASK_HEIGHT = 100;
+const TASK_WIDTH = 260;
+const GROUP_HEADER_HEIGHT = 60;
+const COLUMN_GAP = 40;
+const PLAY_GAP = 80;
 
-  // React Flow handlers
+const GROUP_ORDER: TaskGroupType[] = [
+  "pre_tasks",
+  "roles",
+  "tasks",
+  "post_tasks",
+  "handlers",
+];
+
+interface CanvasStore {
+  nodes: Node<AnyNodeData>[];
+  edges: Edge[];
+  viewMode: ViewMode;
+
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
 
-  // Playbook loading
   loadFromYAML: (
     yamlContent: string,
     playbookFile?: string,
@@ -30,10 +54,9 @@ interface CanvasStore {
     playbooks: Array<{ content: string; filename: string; id: string }>,
   ) => void;
 
-  // HeadNode management
+  setViewMode: (mode: ViewMode) => void;
   toggleHeadNodeExpansion: (headNodeId: string) => void;
 
-  // Execution state management
   updateTaskState: (taskId: string, state: ExecutionState) => void;
   updateTaskStateByName: (taskName: string, state: ExecutionState) => void;
   updateHeadNodeStateByPlayName: (
@@ -41,20 +64,305 @@ interface CanvasStore {
     state: ExecutionState,
   ) => void;
   resetAllTaskStates: () => void;
-
-  // Canvas management
   clearCanvas: () => void;
 }
+
+// ─── Layout helpers ───
+
+function buildFlatLayout(result: ParseResult): {
+  nodes: Node<AnyNodeData>[];
+  edges: Edge[];
+} {
+  const nodes: Node<AnyNodeData>[] = [];
+  const edges: Edge[] = [];
+
+  let currentX = 300;
+
+  for (const headNode of result.headNodes) {
+    let currentY = 100;
+
+    // HeadNode
+    nodes.push({
+      id: headNode.id,
+      type: "headNode",
+      position: { x: currentX, y: currentY },
+      data: {
+        ...headNode,
+        state: "idle" as ExecutionState,
+        isExpanded: false,
+        taskGroupSummary: buildGroupSummary(result, headNode.id),
+        type: "headNode" as const,
+      },
+    });
+    currentY += HEADNODE_HEIGHT;
+
+    // Tasks for this play (all groups flattened in order)
+    const playTasks = result.tasks.filter(
+      (t) => t.parentHeadNodeId === headNode.id,
+    );
+    const playRoles = result.roles.filter(
+      (r) => r.parentHeadNodeId === headNode.id,
+    );
+
+    // Interleave roles and tasks in execution order
+    const allItems: Array<{ type: "task" | "role"; order: number; data: any }> =
+      [];
+    for (const t of playTasks) {
+      allItems.push({ type: "task", order: t.order, data: t });
+    }
+    for (const r of playRoles) {
+      allItems.push({ type: "role", order: r.order, data: r });
+    }
+    allItems.sort((a, b) => a.order - b.order);
+
+    let prevId = headNode.id;
+    for (const item of allItems) {
+      if (item.type === "task") {
+        const task = item.data;
+        nodes.push({
+          id: task.id,
+          type: "simpleTask",
+          position: { x: currentX + 45, y: currentY },
+          data: {
+            taskId: task.id,
+            name: task.name,
+            module: task.module,
+            state: "idle" as ExecutionState,
+            playName: task.playName,
+            playbookFile: task.playbookFile,
+            playbookId: task.playbookId,
+            parentHeadNodeId: task.parentHeadNodeId,
+            taskGroup: task.taskGroup,
+            roleName: task.roleName,
+            blockType: task.blockType,
+            type: "simpleTask" as const,
+          },
+        });
+        edges.push({
+          id: `edge-${prevId}-${task.id}`,
+          source: prevId,
+          target: task.id,
+          type: "smoothstep",
+        });
+        prevId = task.id;
+        currentY += TASK_HEIGHT;
+      } else {
+        const role = item.data;
+        nodes.push({
+          id: role.id,
+          type: "roleNode",
+          position: { x: currentX + 45, y: currentY },
+          data: {
+            roleId: role.id,
+            name: role.name,
+            state: "idle" as ExecutionState,
+            parentHeadNodeId: role.parentHeadNodeId,
+            playbookFile: role.playbookFile,
+            playbookId: role.playbookId,
+            vars: role.vars,
+            tags: role.tags,
+            when: role.when,
+            type: "roleNode" as const,
+          },
+        });
+        edges.push({
+          id: `edge-${prevId}-${role.id}`,
+          source: prevId,
+          target: role.id,
+          type: "smoothstep",
+        });
+        prevId = role.id;
+        currentY += TASK_HEIGHT;
+      }
+    }
+
+    currentX += 500;
+  }
+
+  return { nodes, edges };
+}
+
+function buildGroupedLayout(result: ParseResult): {
+  nodes: Node<AnyNodeData>[];
+  edges: Edge[];
+} {
+  const nodes: Node<AnyNodeData>[] = [];
+  const edges: Edge[] = [];
+
+  let playStartX = 300;
+
+  for (const headNode of result.headNodes) {
+    const playGroups = result.taskGroups.filter(
+      (g) => g.parentHeadNodeId === headNode.id,
+    );
+    const playTasks = result.tasks.filter(
+      (t) => t.parentHeadNodeId === headNode.id,
+    );
+    const playRoles = result.roles.filter(
+      (r) => r.parentHeadNodeId === headNode.id,
+    );
+
+    // Calculate total columns needed for this play
+    const activeGroups = GROUP_ORDER.filter((gt) =>
+      playGroups.some((g) => g.type === gt),
+    );
+    const totalWidth =
+      activeGroups.length * (TASK_WIDTH + COLUMN_GAP) - COLUMN_GAP;
+
+    // Center the HeadNode above the columns
+    const headX = playStartX + Math.max(0, (totalWidth - 350) / 2);
+    const headY = 100;
+
+    nodes.push({
+      id: headNode.id,
+      type: "headNode",
+      position: { x: headX, y: headY },
+      data: {
+        ...headNode,
+        state: "idle" as ExecutionState,
+        isExpanded: false,
+        taskGroupSummary: buildGroupSummary(result, headNode.id),
+        type: "headNode" as const,
+      },
+    });
+
+    let colX = playStartX;
+    const groupStartY = headY + HEADNODE_HEIGHT;
+
+    for (const groupType of activeGroups) {
+      const group = playGroups.find((g) => g.type === groupType);
+      if (!group) continue;
+
+      // TaskGroup header node
+      nodes.push({
+        id: group.id,
+        type: "taskGroup",
+        position: { x: colX, y: groupStartY },
+        data: {
+          groupId: group.id,
+          groupType: group.type,
+          label: group.label,
+          parentHeadNodeId: headNode.id,
+          state: "idle" as ExecutionState,
+          type: "taskGroup" as const,
+        },
+      });
+
+      // Edge from HeadNode to group header
+      edges.push({
+        id: `edge-${headNode.id}-${group.id}`,
+        source: headNode.id,
+        target: group.id,
+        type: "smoothstep",
+      });
+
+      let itemY = groupStartY + GROUP_HEADER_HEIGHT;
+      let prevItemId = group.id;
+
+      if (groupType === "roles") {
+        // Render role nodes in this column
+        for (const role of playRoles) {
+          nodes.push({
+            id: role.id,
+            type: "roleNode",
+            position: { x: colX, y: itemY },
+            data: {
+              roleId: role.id,
+              name: role.name,
+              state: "idle" as ExecutionState,
+              parentHeadNodeId: role.parentHeadNodeId,
+              playbookFile: role.playbookFile,
+              playbookId: role.playbookId,
+              vars: role.vars,
+              tags: role.tags,
+              when: role.when,
+              type: "roleNode" as const,
+            },
+          });
+          edges.push({
+            id: `edge-${prevItemId}-${role.id}`,
+            source: prevItemId,
+            target: role.id,
+            type: "smoothstep",
+          });
+          prevItemId = role.id;
+          itemY += TASK_HEIGHT;
+        }
+      } else {
+        // Render task nodes in this column
+        const groupTasks = playTasks.filter(
+          (t) => t.taskGroup === groupType,
+        );
+        for (const task of groupTasks) {
+          nodes.push({
+            id: task.id,
+            type: "simpleTask",
+            position: { x: colX, y: itemY },
+            data: {
+              taskId: task.id,
+              name: task.name,
+              module: task.module,
+              state: "idle" as ExecutionState,
+              playName: task.playName,
+              playbookFile: task.playbookFile,
+              playbookId: task.playbookId,
+              parentHeadNodeId: task.parentHeadNodeId,
+              taskGroup: task.taskGroup,
+              roleName: task.roleName,
+              blockType: task.blockType,
+              type: "simpleTask" as const,
+            },
+          });
+          edges.push({
+            id: `edge-${prevItemId}-${task.id}`,
+            source: prevItemId,
+            target: task.id,
+            type: "smoothstep",
+          });
+          prevItemId = task.id;
+          itemY += TASK_HEIGHT;
+        }
+      }
+
+      colX += TASK_WIDTH + COLUMN_GAP;
+    }
+
+    playStartX += totalWidth + PLAY_GAP + 100;
+  }
+
+  return { nodes, edges };
+}
+
+function buildGroupSummary(result: ParseResult, headNodeId: string): string {
+  const groups = result.taskGroups.filter(
+    (g) => g.parentHeadNodeId === headNodeId,
+  );
+  const tasks = result.tasks.filter(
+    (t) => t.parentHeadNodeId === headNodeId,
+  );
+  const roles = result.roles.filter(
+    (r) => r.parentHeadNodeId === headNodeId,
+  );
+
+  const parts: string[] = [];
+  if (tasks.length > 0) parts.push(`${tasks.length} tasks`);
+  if (roles.length > 0) parts.push(`${roles.length} roles`);
+  if (groups.length > 0) parts.push(`${groups.length} groups`);
+  return parts.join(", ");
+}
+
+// ─── Store ───
 
 export const useCanvasStore = create<CanvasStore>()(
   persist(
     (set, get) => ({
       nodes: [],
       edges: [],
+      viewMode: "flat" as ViewMode,
 
       onNodesChange: (changes) => {
         set({
-          nodes: applyNodeChanges(changes, get().nodes) as Node<TaskNodeData>[],
+          nodes: applyNodeChanges(changes, get().nodes) as Node<AnyNodeData>[],
         });
       },
 
@@ -68,6 +376,10 @@ export const useCanvasStore = create<CanvasStore>()(
         set({
           edges: [...get().edges, { ...connection, id: `edge-${Date.now()}` }],
         });
+      },
+
+      setViewMode: (mode) => {
+        set({ viewMode: mode });
       },
 
       loadFromYAML: (
@@ -87,45 +399,12 @@ export const useCanvasStore = create<CanvasStore>()(
           return;
         }
 
-        if (result.headNodes && result.headNodes.length > 0) {
-          get().loadMultiplePlaybooks([
-            { content: yamlContent, filename: playbookFile, id: playbookId },
-          ]);
-          return;
-        }
+        const layout =
+          get().viewMode === "grouped"
+            ? buildGroupedLayout(result)
+            : buildFlatLayout(result);
 
-        const nodes: Node<TaskNodeData>[] = result.tasks.map((task, index) => ({
-          id: task.id,
-          type: "simpleTask",
-          position: {
-            x: 300,
-            y: 100 + index * 120,
-          },
-          data: {
-            taskId: task.id,
-            name: task.name,
-            module: task.module,
-            state: "idle",
-            playName: task.playName || "",
-            playbookFile: task.playbookFile,
-            playbookId: task.playbookId,
-            parentHeadNodeId: task.parentHeadNodeId,
-            type: "simpleTask",
-          },
-        }));
-
-        const edges: Edge[] = [];
-        for (let i = 0; i < result.tasks.length - 1; i++) {
-          edges.push({
-            id: `edge-${i}`,
-            source: result.tasks[i].id,
-            target: result.tasks[i + 1].id,
-            type: "smoothstep",
-            animated: false,
-          });
-        }
-
-        set({ nodes, edges });
+        set(layout);
       },
 
       loadMultiplePlaybooks: (playbooks) => {
@@ -137,105 +416,12 @@ export const useCanvasStore = create<CanvasStore>()(
           return;
         }
 
-        const nodes: Node<TaskNodeData | HeadNodeData>[] = [];
-        const edges: Edge[] = [];
+        const layout =
+          get().viewMode === "grouped"
+            ? buildGroupedLayout(result)
+            : buildFlatLayout(result);
 
-        let currentY = 100;
-        const HEADNODE_HEIGHT = 200; // Height when collapsed
-        const TASK_HEIGHT = 120;
-        let X_POSITION = 300;
-
-        for (const headNode of result.headNodes) {
-          nodes.push({
-            id: headNode.id,
-            type: "headNode",
-            position: { x: X_POSITION, y: currentY },
-            data: {
-              ...headNode,
-              state: "idle" as ExecutionState,
-              isExpanded: false,
-              type: "headNode" as const,
-            },
-          });
-
-          currentY += HEADNODE_HEIGHT;
-
-          const headNodeTasks = result.tasks.filter(
-            (task) => task.parentHeadNodeId === headNode.id,
-          );
-
-          for (const task of headNodeTasks) {
-            nodes.push({
-              id: task.id,
-              type: "simpleTask",
-              position: { x: X_POSITION + 50, y: currentY },
-              data: {
-                taskId: task.id,
-                name: task.name,
-                module: task.module,
-                state: "idle",
-                playName: task.playName,
-                playbookFile: task.playbookFile,
-                playbookId: task.playbookId,
-                parentHeadNodeId: task.parentHeadNodeId,
-                type: "simpleTask" as const,
-              },
-            });
-
-            currentY += TASK_HEIGHT;
-          }
-          currentY = 100;
-          X_POSITION += 500;
-        }
-
-        // Create Head edges
-        for (const headNode of result.headNodes) {
-          const headNodeTasks = result.tasks.filter(
-            (task) => task.parentHeadNodeId === headNode.id,
-          );
-
-          if (headNodeTasks.length > 0) {
-            edges.push({
-              id: `edge-${headNode.id}-to-first-task`,
-              source: headNode.id,
-              target: headNodeTasks[0].id,
-              type: "smoothstep",
-              animated: false,
-            });
-          }
-        }
-
-        // Create Task → Task edges
-        for (let i = 0; i < result.tasks.length - 1; i++) {
-          const currentTask = result.tasks[i];
-          const nextTask = result.tasks[i + 1];
-
-          if (currentTask.parentHeadNodeId === nextTask.parentHeadNodeId) {
-            edges.push({
-              id: `edge-task-${i}`,
-              source: currentTask.id,
-              target: nextTask.id,
-              type: "smoothstep",
-              animated: false,
-            });
-          }
-        }
-        // Connects head edges
-        // for (let i = 0; i < result.headNodes.length - 1; i++) {
-        //   const currentHead = result.headNodes[i];
-        //   const nextHead = result.headNodes[i + 1];
-        //
-        //   edges.push({
-        //     id: `edge-head-${i}`,
-        //     source: currentHead.id,
-        //     target: nextHead.id,
-        //     type: "smoothstep",
-        //     animated: true,  // Animate to show flow
-        //     style: {stroke: "#22c55e", strokeWidth: 2},  // Green for dependencies
-        //   });
-        // }
-
-        set({ nodes, edges });
+        set(layout);
       },
 
       toggleHeadNodeExpansion: (headNodeId) => {
@@ -263,13 +449,15 @@ export const useCanvasStore = create<CanvasStore>()(
           ),
         });
       },
+
       updateTaskStateByName: (taskName, state) => {
         set({
-          nodes: get().nodes.map((node) =>
-            node.data.name === taskName
-              ? { ...node, data: { ...node.data, state } }
-              : node,
-          ),
+          nodes: get().nodes.map((node) => {
+            if ("name" in node.data && node.data.name === taskName) {
+              return { ...node, data: { ...node.data, state } };
+            }
+            return node;
+          }),
         });
       },
 
@@ -294,15 +482,13 @@ export const useCanvasStore = create<CanvasStore>()(
       },
 
       clearCanvas: () => {
-        set({
-          nodes: [],
-          edges: [],
-        });
+        set({ nodes: [], edges: [] });
       },
     }),
     {
       name: "canvas-storage",
       partialize: (state) => ({
+        viewMode: state.viewMode,
         nodes: state.nodes.map((node) => ({
           ...node,
           data: { ...node.data, state: "idle" },

@@ -9,7 +9,7 @@ export function YamlTab() {
   const content = selectedFileContent ?? "";
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full flex flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2">
           <File className="w-3 h-3 text-muted-foreground" />
@@ -22,7 +22,7 @@ export function YamlTab() {
         )}
       </div>
 
-      <div>
+      <div className="flex-1 min-h-0 overflow-hidden">
         <YamlCodeViewer content={content} readOnly height="100%" />
       </div>
     </div>

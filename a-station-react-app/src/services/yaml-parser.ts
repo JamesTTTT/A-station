@@ -1,12 +1,86 @@
 import yaml from "js-yaml";
-import type {PlaybookTask, ParseResult, HeadNode} from "@/types/nodes";
+import type {
+  PlaybookTask,
+  ParseResult,
+  HeadNode,
+  TaskGroupType,
+  TaskGroup,
+  PlaybookRole,
+} from "@/types/nodes";
+
+const TASK_META_KEYS = new Set([
+  "name",
+  "when",
+  "with_items",
+  "with_dict",
+  "with_fileglob",
+  "with_first_found",
+  "with_together",
+  "with_subelements",
+  "with_sequence",
+  "with_random_choice",
+  "with_nested",
+  "with_indexed_items",
+  "with_flattened",
+  "loop",
+  "loop_control",
+  "register",
+  "ignore_errors",
+  "ignore_unreachable",
+  "changed_when",
+  "failed_when",
+  "tags",
+  "become",
+  "become_user",
+  "become_method",
+  "become_flags",
+  "delegate_to",
+  "delegate_facts",
+  "notify",
+  "vars",
+  "environment",
+  "async",
+  "poll",
+  "retries",
+  "delay",
+  "until",
+  "block",
+  "rescue",
+  "always",
+  "listen",
+  "no_log",
+  "check_mode",
+  "diff",
+  "any_errors_fatal",
+  "throttle",
+  "run_once",
+  "connection",
+  "timeout",
+  "collections",
+  "module_defaults",
+  "args",
+  "debugger",
+  "action",
+  "local_action",
+]);
+
+const TASK_GROUP_DEFS: {
+  key: string;
+  type: TaskGroupType;
+  label: string;
+}[] = [
+  { key: "pre_tasks", type: "pre_tasks", label: "Pre-Tasks" },
+  { key: "roles", type: "roles", label: "Roles" },
+  { key: "tasks", type: "tasks", label: "Tasks" },
+  { key: "post_tasks", type: "post_tasks", label: "Post-Tasks" },
+  { key: "handlers", type: "handlers", label: "Handlers" },
+];
 
 export class PlaybookParser {
-  // Public method for backward compatibility (single playbook)
   public parse(
     yamlContent: string,
     playbookFile: string = "playbook.yml",
-    playbookId: string = "default"
+    playbookId: string = "default",
   ): ParseResult {
     return this.parseSingle(yamlContent, playbookFile, playbookId, 0);
   }
@@ -15,10 +89,16 @@ export class PlaybookParser {
     yamlContent: string,
     playbookFile: string,
     playbookId: string,
-    startingOrder: number
+    startingOrder: number,
   ): ParseResult {
     if (!yamlContent || yamlContent.trim() === "") {
-      return {success: true, headNodes: [], tasks: []};
+      return {
+        success: true,
+        headNodes: [],
+        tasks: [],
+        taskGroups: [],
+        roles: [],
+      };
     }
 
     try {
@@ -29,20 +109,23 @@ export class PlaybookParser {
           success: false,
           headNodes: [],
           tasks: [],
+          taskGroups: [],
+          roles: [],
           error: "Playbook must be a list of plays",
         };
       }
 
       const headNodes: HeadNode[] = [];
       const tasks: PlaybookTask[] = [];
+      const taskGroups: TaskGroup[] = [];
+      const roles: PlaybookRole[] = [];
       let globalOrder = startingOrder;
 
       for (let playIndex = 0; playIndex < parsed.length; playIndex++) {
         const play = parsed[playIndex];
-
-        // Create HeadNode for this play
         const headNodeId = `head-${playbookId}-play${playIndex}`;
-        const headNode: HeadNode = {
+
+        headNodes.push({
           id: headNodeId,
           playbookId,
           playbookFile,
@@ -54,91 +137,192 @@ export class PlaybookParser {
           vars: play.vars,
           tags: play.tags,
           gather_facts: play.gather_facts,
-        };
-
-        headNodes.push(headNode);
+        });
         globalOrder++;
 
-        // Extract tasks for this play
-        const playTasks = this.extractPlayTasks(
-          play,
-          playbookId,
-          playbookFile,
-          headNodeId,
-          play.name || "Unnamed Play",
-          globalOrder
-        );
+        // Extract each task group in Ansible execution order
+        for (const groupDef of TASK_GROUP_DEFS) {
+          if (groupDef.key === "roles") {
+            if (play.roles && Array.isArray(play.roles)) {
+              const groupId = `group-${headNodeId}-roles`;
+              taskGroups.push({
+                id: groupId,
+                type: "roles",
+                parentHeadNodeId: headNodeId,
+                label: groupDef.label,
+              });
 
-        tasks.push(...playTasks);
-        globalOrder += playTasks.length;
+              for (let i = 0; i < play.roles.length; i++) {
+                const roleDef = this.parseRoleDefinition(play.roles[i]);
+                roles.push({
+                  id: `role-${headNodeId}-${i}`,
+                  name: roleDef.name,
+                  parentHeadNodeId: headNodeId,
+                  playbookId,
+                  playbookFile,
+                  order: globalOrder,
+                  vars: roleDef.vars,
+                  tags: roleDef.tags,
+                  when: roleDef.when,
+                });
+                globalOrder++;
+              }
+            }
+            continue;
+          }
+
+          const taskList = play[groupDef.key];
+          if (!taskList || !Array.isArray(taskList)) continue;
+
+          taskGroups.push({
+            id: `group-${headNodeId}-${groupDef.type}`,
+            type: groupDef.type,
+            parentHeadNodeId: headNodeId,
+            label: groupDef.label,
+          });
+
+          const extracted = this.extractTaskList(
+            taskList,
+            groupDef.type,
+            playbookId,
+            playbookFile,
+            headNodeId,
+            play.name || "Unnamed Play",
+            globalOrder,
+          );
+          tasks.push(...extracted);
+          globalOrder += extracted.length;
+        }
       }
 
-      return {
-        success: true,
-        headNodes,
-        tasks,
-      };
+      return { success: true, headNodes, tasks, taskGroups, roles };
     } catch (error) {
       return {
         success: false,
         headNodes: [],
         tasks: [],
+        taskGroups: [],
+        roles: [],
         error: error instanceof Error ? error.message : "Failed to parse YAML",
       };
     }
   }
 
   public parseMultiple(
-    playbooks: Array<{ content: string; filename: string; id: string }>
+    playbooks: Array<{ content: string; filename: string; id: string }>,
   ): ParseResult {
-    const allHeadNodes: HeadNode[] = [];
-    const allTasks: PlaybookTask[] = [];
+    const all: ParseResult = {
+      success: true,
+      headNodes: [],
+      tasks: [],
+      taskGroups: [],
+      roles: [],
+    };
     let globalOrder = 0;
 
-    for (const playbook of playbooks) {
+    for (const pb of playbooks) {
       const result = this.parseSingle(
-        playbook.content,
-        playbook.filename,
-        playbook.id,
-        globalOrder
+        pb.content,
+        pb.filename,
+        pb.id,
+        globalOrder,
       );
+      if (!result.success) return result;
 
-      if (!result.success) {
-        return result; // Early return on error
-      }
-
-      allHeadNodes.push(...result.headNodes);
-      allTasks.push(...result.tasks);
-      globalOrder = allTasks.length; // Update global order
+      all.headNodes.push(...result.headNodes);
+      all.tasks.push(...result.tasks);
+      all.taskGroups.push(...result.taskGroups);
+      all.roles.push(...result.roles);
+      globalOrder += result.tasks.length + result.roles.length;
     }
 
-    return {
-      success: true,
-      headNodes: allHeadNodes,
-      tasks: allTasks,
-    };
+    return all;
   }
 
-  private extractPlayTasks(
-    play: any,
+  // --- Task extraction ---
+
+  private extractTaskList(
+    taskList: any[],
+    groupType: TaskGroupType,
     playbookId: string,
     playbookFile: string,
     parentHeadNodeId: string,
     playName: string,
-    startingOrder: number
+    startingOrder: number,
   ): PlaybookTask[] {
     const tasks: PlaybookTask[] = [];
     let order = startingOrder;
 
-    if (play.tasks && Array.isArray(play.tasks)) {
-      for (const task of play.tasks) {
+    for (const task of taskList) {
+      if (task.block) {
+        const blockTasks = this.extractBlock(
+          task,
+          groupType,
+          playbookId,
+          playbookFile,
+          parentHeadNodeId,
+          playName,
+          order,
+        );
+        tasks.push(...blockTasks);
+        order += blockTasks.length;
+        continue;
+      }
+
+      const extracted = this.extractTask(
+        task,
+        order,
+        playName,
+        playbookId,
+        playbookFile,
+        parentHeadNodeId,
+        groupType,
+      );
+      if (extracted) {
+        tasks.push(extracted);
+        order++;
+      }
+    }
+
+    return tasks;
+  }
+
+  private extractBlock(
+    block: any,
+    groupType: TaskGroupType,
+    playbookId: string,
+    playbookFile: string,
+    parentHeadNodeId: string,
+    playName: string,
+    startingOrder: number,
+  ): PlaybookTask[] {
+    const tasks: PlaybookTask[] = [];
+    let order = startingOrder;
+
+    const sections: Array<{
+      key: string;
+      blockType: "block" | "rescue" | "always";
+    }> = [
+      { key: "block", blockType: "block" },
+      { key: "rescue", blockType: "rescue" },
+      { key: "always", blockType: "always" },
+    ];
+
+    for (const section of sections) {
+      const list = block[section.key];
+      if (!Array.isArray(list)) continue;
+
+      for (const task of list) {
         const extracted = this.extractTask(
           task,
           order,
           playName,
           playbookId,
           playbookFile,
-          parentHeadNodeId
+          parentHeadNodeId,
+          groupType,
+          undefined,
+          section.blockType,
         );
         if (extracted) {
           tasks.push(extracted);
@@ -156,12 +340,15 @@ export class PlaybookParser {
     playName: string,
     playbookId: string,
     playbookFile: string,
-    parentHeadNodeId: string
+    parentHeadNodeId: string,
+    taskGroup: TaskGroupType,
+    roleName?: string,
+    blockType?: "block" | "rescue" | "always",
   ): PlaybookTask | null {
     try {
       const taskName = task.name || this.deriveTaskName(task);
       const module = this.extractModule(task);
-      const id = `task-${order}`;
+      const id = `task-${parentHeadNodeId}-${taskGroup}-${order}`;
 
       return {
         id,
@@ -172,50 +359,79 @@ export class PlaybookParser {
         playbookId,
         playbookFile,
         parentHeadNodeId,
+        taskGroup,
+        roleName,
+        blockType,
       };
-    } catch (error) {
-      console.warn("Failed to parse task:", error);
+    } catch {
       return null;
     }
   }
 
+  // --- Role parsing ---
+
+  private parseRoleDefinition(role: any): {
+    name: string;
+    vars?: Record<string, any>;
+    tags?: string[];
+    when?: string;
+  } {
+    if (typeof role === "string") {
+      return { name: role };
+    }
+
+    if (typeof role === "object" && role !== null) {
+      const name = role.role || role.name || "Unknown role";
+      const { role: _r, name: _n, tags, when, vars, ...inlineVars } = role;
+
+      const allVars = { ...inlineVars, ...vars };
+      const hasVars = Object.keys(allVars).length > 0;
+
+      return {
+        name,
+        vars: hasVars ? allVars : undefined,
+        tags: tags
+          ? Array.isArray(tags)
+            ? tags
+            : [tags]
+          : undefined,
+        when: when ? String(when) : undefined,
+      };
+    }
+
+    return { name: String(role) };
+  }
+
+  // --- Module detection ---
+
   private deriveTaskName(task: any): string {
+    if (task.include_tasks) return `Include: ${task.include_tasks}`;
+    if (task.import_tasks) return `Import: ${task.import_tasks}`;
+    if (task.include_role) {
+      const name =
+        typeof task.include_role === "string"
+          ? task.include_role
+          : task.include_role.name;
+      return `Include role: ${name}`;
+    }
+    if (task.import_role) {
+      const name =
+        typeof task.import_role === "string"
+          ? task.import_role
+          : task.import_role.name;
+      return `Import role: ${name}`;
+    }
+
     const module = this.extractModule(task);
-    return module ? `${module} task` : "Unnamed task";
+    return module !== "unknown" ? `${module} task` : "Unnamed task";
   }
 
   private extractModule(task: any): string {
-    // Meta keys to ignore
-    const metaKeys = [
-      "name",
-      "when",
-      "with_items",
-      "loop",
-      "register",
-      "ignore_errors",
-      "changed_when",
-      "failed_when",
-      "tags",
-      "become",
-      "become_user",
-      "delegate_to",
-      "notify",
-      "vars",
-      "environment",
-      "async",
-      "poll",
-      "retries",
-      "delay",
-      "until",
-    ];
-
-    const keys = Object.keys(task);
-    for (const key of keys) {
-      if (!metaKeys.includes(key)) {
+    for (const key of Object.keys(task)) {
+      if (!TASK_META_KEYS.has(key)) {
         return key;
       }
     }
-
     return "unknown";
   }
 }

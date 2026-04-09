@@ -89,9 +89,15 @@ export const useSourceStore = create<SourceStore>()(
           if (result.success) {
             set({ sources: result.data, loading: false });
 
-            // Auto-select first source if none active
             const state = get();
-            if (!state.activeSourceId && result.data.length > 0) {
+            const persisted = state.activeSourceId;
+            const stillExists = persisted && result.data.some((s) => s.id === persisted);
+
+            if (stillExists) {
+              // Persisted source is valid — just load its file tree
+              await get().fetchFileTree(workspaceId, persisted!, token);
+            } else if (result.data.length > 0) {
+              // No valid persisted source — pick the first one
               get().setActiveSource(result.data[0].id, workspaceId, token);
             }
           } else {
@@ -219,7 +225,7 @@ export const useSourceStore = create<SourceStore>()(
       },
 
       selectFile: async (workspaceId, sourceId, path, token) => {
-        set({ fileLoading: true, selectedFilePath: path });
+        set({ fileLoading: true, selectedFilePath: path, selectedFileContent: null });
 
         try {
           const result = await getFileContent(

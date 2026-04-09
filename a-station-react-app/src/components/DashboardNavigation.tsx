@@ -1,4 +1,4 @@
-import { GalleryVerticalEnd, ListFilterPlus, Plus } from "lucide-react";
+import { FolderTree, Server, History } from "lucide-react";
 import { Button } from "@/components/ui";
 
 export const DashboardNavigation = () => {
@@ -7,18 +7,18 @@ export const DashboardNavigation = () => {
       <div className="flex flex-col items-center">
         <Button className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted hover:bg-accent transition-colors">
           <span className="text-muted-foreground text-sm">
-            <Plus />
+            <FolderTree />
           </span>
         </Button>
         <Button className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted hover:bg-accent transition-colors">
           <span className="text-muted-foreground text-sm">
-            <GalleryVerticalEnd />
+            <Server />
           </span>
         </Button>
 
         <Button className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted hover:bg-accent transition-colors">
           <span className="text-muted-foreground text-sm">
-            <ListFilterPlus />
+            <History />
           </span>
         </Button>
       </div>
