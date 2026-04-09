@@ -12,6 +12,8 @@ import {
   NotFoundPage,
   Dashboard,
   Home,
+  DocsPage,
+  DonatePage,
   WorkspaceSelect,
 } from "@/pages/index.tsx";
 import { useAuthStore } from "@/stores/authStore";
@@ -28,6 +30,26 @@ const indexRoute = createRoute({
   component: () => (
     <LandingLayout>
       <Home />
+    </LandingLayout>
+  ),
+});
+
+const docsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/docs",
+  component: () => (
+    <LandingLayout>
+      <DocsPage />
+    </LandingLayout>
+  ),
+});
+
+const donateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/donate",
+  component: () => (
+    <LandingLayout>
+      <DonatePage />
     </LandingLayout>
   ),
 });
@@ -77,6 +99,8 @@ const dashboardRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  docsRoute,
+  donateRoute,
   loginRoute,
   registerRoute,
   workspaceSelectRoute,

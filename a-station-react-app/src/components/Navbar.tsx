@@ -33,7 +33,7 @@ export const Navbar = ({ isAuth }: { isAuth: boolean }) => {
           </NavigationMenuItem>
           <NavigationMenuItem>
             <NavigationMenuLink asChild>
-              <a href="/get-started">Get Started</a>
+              <a href="/donate">Donate</a>
             </NavigationMenuLink>
           </NavigationMenuItem>
         </NavigationMenuList>
