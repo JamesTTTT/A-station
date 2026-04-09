@@ -25,7 +25,7 @@ export function YamlCodeViewer({
   const safeContent = typeof content === "string" ? content : "";
 
   return (
-    <div className="h-full w-full overflow-scroll mb-20">
+    <div className="h-full w-full overflow-hidden">
       <CodeMirror
         value={safeContent}
         height={height}
