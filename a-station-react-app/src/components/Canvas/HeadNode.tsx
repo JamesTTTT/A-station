@@ -159,12 +159,15 @@ export const HeadNode = ({ id, data, selected }: HeadNodeProps) => {
 
       {/* Collapsed Summary */}
       {!data.isExpanded && (
-        <div className="px-4 py-2 text-xs text-muted-foreground">
+        <div className="px-4 py-2 text-xs text-muted-foreground space-y-0.5">
           {data.hosts && (
-            <span>
+            <div>
               Hosts:{" "}
               {Array.isArray(data.hosts) ? data.hosts.join(", ") : data.hosts}
-            </span>
+            </div>
+          )}
+          {data.taskGroupSummary && (
+            <div>{data.taskGroupSummary}</div>
           )}
         </div>
       )}

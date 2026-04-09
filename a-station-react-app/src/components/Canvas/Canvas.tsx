@@ -14,11 +14,11 @@ import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useJobStore } from "@/stores/jobStore";
 import { nodeTypes } from "@/components/Canvas/nodeTypes";
 import { Button } from "@/components/ui";
-import { Play } from "lucide-react";
+import { Play, List, Columns } from "lucide-react";
 import { useJobExecution } from "@/hooks";
 import type { FileTreeNode } from "@/types";
+import type { ViewMode } from "@/types/nodes";
 
-/** Recursively collect inventory file paths from the file tree */
 function collectInventoryPaths(
   node: FileTreeNode,
   currentPath: string,
@@ -52,6 +52,11 @@ function collectInventoryPaths(
   return paths;
 }
 
+const VIEW_MODE_OPTIONS: { value: ViewMode; label: string; icon: typeof List }[] = [
+  { value: "flat", label: "Flat", icon: List },
+  { value: "grouped", label: "Grouped", icon: Columns },
+];
+
 export const Canvas = () => {
   const { executeJob } = useJobExecution();
   const { setCurrentJob } = useJobStore();
@@ -63,6 +68,8 @@ export const Canvas = () => {
     onConnect,
     loadFromYAML,
     clearCanvas,
+    viewMode,
+    setViewMode,
   } = useCanvasStore();
   const {
     selectedFilePath,
@@ -74,7 +81,7 @@ export const Canvas = () => {
 
   const [inventoryPath, setInventoryPath] = useState<string>("");
 
-  // Load YAML into canvas when selected file changes
+  // Reload canvas when view mode changes
   useEffect(() => {
     if (
       selectedFileContent &&
@@ -83,9 +90,8 @@ export const Canvas = () => {
     ) {
       loadFromYAML(selectedFileContent, selectedFilePath, activeSourceId || "default");
     }
-  }, [selectedFilePath, selectedFileContent, loadFromYAML, activeSourceId]);
+  }, [selectedFilePath, selectedFileContent, loadFromYAML, activeSourceId, viewMode]);
 
-  // Derive inventory paths from file tree
   const inventoryPaths = useMemo(() => {
     if (!fileTree?.children) return [];
     const paths: string[] = [];
@@ -95,7 +101,6 @@ export const Canvas = () => {
     return paths;
   }, [fileTree]);
 
-  // Auto-select first inventory if none selected
   useEffect(() => {
     if (!inventoryPath && inventoryPaths.length > 0) {
       setInventoryPath(inventoryPaths[0]);
@@ -103,6 +108,19 @@ export const Canvas = () => {
   }, [inventoryPaths, inventoryPath]);
 
   const proOptions = { hideAttribution: true };
+
+  // Count meaningful nodes (tasks + roles)
+  const nodeStats = useMemo(() => {
+    let tasks = 0;
+    let roles = 0;
+    let plays = 0;
+    for (const n of nodes) {
+      if (n.data.type === "simpleTask") tasks++;
+      else if (n.data.type === "roleNode") roles++;
+      else if (n.data.type === "headNode") plays++;
+    }
+    return { tasks, roles, plays };
+  }, [nodes]);
 
   return (
     <div className="flex-1 h-full bg-muted/70 overflow-auto relative">
@@ -131,24 +149,57 @@ export const Canvas = () => {
               case "skipped":
                 return "#eab308";
               default:
+                if (node.data.type === "taskGroup") return "#64748b";
+                if (node.data.type === "roleNode") return "#10b981";
                 return "#94a3b8";
             }
           }}
         />
+
+        {/* Top-left: Clear + View Toggle */}
         <Panel position="top-left" className="flex items-center gap-2">
           <Button variant="canvas" onClick={clearCanvas}>
             Clear Canvas
           </Button>
+
+          <div className="flex items-center bg-background/90 backdrop-blur rounded-lg border overflow-hidden">
+            {VIEW_MODE_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => setViewMode(opt.value)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                    viewMode === opt.value
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </Panel>
 
+        {/* Top-right: File info + Execute */}
         {selectedFilePath && nodes.length > 0 && (
           <Panel position="top-right" className="min-w-38">
             <div className="bg-background/90 backdrop-blur px-3 py-2 rounded-lg border text-sm space-y-2">
               <div className="flex justify-between items-center gap-3">
                 <div>
                   <div className="font-semibold">{selectedFilePath}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {nodes.length} tasks
+                  <div className="text-xs text-muted-foreground mt-1 flex gap-2">
+                    {nodeStats.plays > 0 && (
+                      <span>{nodeStats.plays} plays</span>
+                    )}
+                    {nodeStats.tasks > 0 && (
+                      <span>{nodeStats.tasks} tasks</span>
+                    )}
+                    {nodeStats.roles > 0 && (
+                      <span>{nodeStats.roles} roles</span>
+                    )}
                   </div>
                 </div>
 
@@ -179,7 +230,6 @@ export const Canvas = () => {
                 </Button>
               </div>
 
-              {/* Inventory picker */}
               {inventoryPaths.length > 0 ? (
                 <select
                   value={inventoryPath}
