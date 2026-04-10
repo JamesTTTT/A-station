@@ -18,8 +18,16 @@ interface SourceStore {
   sources: ProjectSource[];
   activeSourceId: string | null;
   fileTree: FileTreeNode | null;
-  selectedFilePath: string | null;
-  selectedFileContent: string | null;
+
+  // Multi-file selection: files loaded onto the canvas (YAML only)
+  selectedFilePaths: string[];
+  // Cache of fetched file contents keyed by path
+  fileContents: Record<string, string>;
+  // The single file shown in the YAML preview pane (may be non-YAML)
+  focusedFilePath: string | null;
+  // Anchor for shift-range selection (last non-shift click)
+  selectionAnchor: string | null;
+
   loading: boolean;
   fileLoading: boolean;
   syncLoading: boolean;
@@ -51,10 +59,17 @@ interface SourceStore {
     sourceId: string,
     token: string,
   ) => Promise<void>;
-  selectFile: (
+
+  setSelection: (
+    paths: string[],
+    focused: string | null,
+    anchor: string | null,
+  ) => void;
+  setFocusedFile: (path: string | null) => void;
+  loadFileContents: (
     workspaceId: string,
     sourceId: string,
-    path: string,
+    paths: string[],
     token: string,
   ) => Promise<void>;
   clearSelection: () => void;
@@ -62,14 +77,20 @@ interface SourceStore {
   getActiveSource: () => ProjectSource | null;
 }
 
+const emptySelection = {
+  selectedFilePaths: [] as string[],
+  fileContents: {} as Record<string, string>,
+  focusedFilePath: null as string | null,
+  selectionAnchor: null as string | null,
+};
+
 export const useSourceStore = create<SourceStore>()(
   persist(
     (set, get) => ({
       sources: [],
       activeSourceId: null,
       fileTree: null,
-      selectedFilePath: null,
-      selectedFileContent: null,
+      ...emptySelection,
       loading: false,
       fileLoading: false,
       syncLoading: false,
@@ -112,8 +133,7 @@ export const useSourceStore = create<SourceStore>()(
         set({
           activeSourceId: sourceId,
           fileTree: null,
-          selectedFilePath: null,
-          selectedFileContent: null,
+          ...emptySelection,
         });
         await get().fetchFileTree(workspaceId, sourceId, token);
       },
@@ -159,8 +179,7 @@ export const useSourceStore = create<SourceStore>()(
                 set({
                   activeSourceId: null,
                   fileTree: null,
-                  selectedFilePath: null,
-                  selectedFileContent: null,
+                  ...emptySelection,
                 });
               }
             }
@@ -224,40 +243,54 @@ export const useSourceStore = create<SourceStore>()(
         }
       },
 
-      selectFile: async (workspaceId, sourceId, path, token) => {
-        set({ fileLoading: true, selectedFilePath: path, selectedFileContent: null });
+      setSelection: (paths, focused, anchor) => {
+        set({
+          selectedFilePaths: paths,
+          focusedFilePath: focused,
+          selectionAnchor: anchor,
+        });
+      },
+
+      setFocusedFile: (path) => {
+        set({ focusedFilePath: path });
+      },
+
+      loadFileContents: async (workspaceId, sourceId, paths, token) => {
+        const state = get();
+        const missing = paths.filter(
+          (p) => state.fileContents[p] === undefined,
+        );
+        if (missing.length === 0) return;
+
+        set({ fileLoading: true });
 
         try {
-          const result = await getFileContent(
-            workspaceId,
-            sourceId,
-            path,
-            token,
+          const results = await Promise.all(
+            missing.map((p) =>
+              getFileContent(workspaceId, sourceId, p, token).then((r) => ({
+                p,
+                r,
+              })),
+            ),
           );
 
-          if (result.success) {
-            set({
-              selectedFileContent: result.data.content,
-              fileLoading: false,
-            });
-          } else {
-            set({
-              selectedFileContent: null,
-              fileLoading: false,
-              error: "Failed to load file",
-            });
+          const next = { ...get().fileContents };
+          for (const { p, r } of results) {
+            if (r.success) {
+              next[p] = r.data.content;
+            }
           }
+          set({ fileContents: next, fileLoading: false });
         } catch {
           set({
-            selectedFileContent: null,
             fileLoading: false,
-            error: "An unexpected error occurred",
+            error: "Failed to load file contents",
           });
         }
       },
 
       clearSelection: () => {
-        set({ selectedFilePath: null, selectedFileContent: null });
+        set({ ...emptySelection });
       },
 
       clearAll: () => {
@@ -265,8 +298,7 @@ export const useSourceStore = create<SourceStore>()(
           sources: [],
           activeSourceId: null,
           fileTree: null,
-          selectedFilePath: null,
-          selectedFileContent: null,
+          ...emptySelection,
           loading: false,
           fileLoading: false,
           syncLoading: false,

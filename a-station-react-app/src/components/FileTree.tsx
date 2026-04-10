@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useSourceStore } from "@/stores/sourceStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -21,25 +21,45 @@ import type { FileTreeNode } from "@/types";
 const isYamlFile = (name: string) =>
   name.endsWith(".yml") || name.endsWith(".yaml");
 
+// Depth-first walk that returns YAML file paths in their visual order.
+// Used as the ordered axis for shift-range selection.
+function collectYamlPaths(node: FileTreeNode, prefix: string): string[] {
+  const here = prefix ? `${prefix}/${node.name}` : node.name;
+  if (node.type === "file") {
+    return isYamlFile(node.name) ? [here] : [];
+  }
+  const out: string[] = [];
+  if (node.children) {
+    for (const child of node.children) {
+      out.push(...collectYamlPaths(child, here));
+    }
+  }
+  return out;
+}
+
 interface TreeNodeProps {
   node: FileTreeNode;
   path: string;
   depth: number;
-  selectedPath: string | null;
-  onSelectFile: (path: string) => void;
+  selectedPaths: Set<string>;
+  focusedPath: string | null;
+  onSelectFile: (path: string, isYaml: boolean, e: MouseEvent) => void;
 }
 
 const TreeNode = ({
   node,
   path,
   depth,
-  selectedPath,
+  selectedPaths,
+  focusedPath,
   onSelectFile,
 }: TreeNodeProps) => {
   const [expanded, setExpanded] = useState(depth < 1);
   const fullPath = path ? `${path}/${node.name}` : node.name;
   const isDir = node.type === "directory";
-  const isSelected = selectedPath === fullPath;
+  const isSelected = selectedPaths.has(fullPath);
+  const isFocused = focusedPath === fullPath;
+  const yaml = !isDir && isYamlFile(node.name);
 
   if (isDir) {
     return (
@@ -69,7 +89,8 @@ const TreeNode = ({
                 node={child}
                 path={fullPath}
                 depth={depth + 1}
-                selectedPath={selectedPath}
+                selectedPaths={selectedPaths}
+                focusedPath={focusedPath}
                 onSelectFile={onSelectFile}
               />
             ))}
@@ -81,16 +102,27 @@ const TreeNode = ({
 
   return (
     <button
-      onClick={() => onSelectFile(fullPath)}
+      onClick={(e) => onSelectFile(fullPath, yaml, e)}
       className={`flex w-full items-center gap-1.5 px-2 py-1 hover:bg-accent cursor-pointer text-left ${
-        isSelected ? "bg-accent" : ""
+        isSelected ? "bg-primary/15" : isFocused ? "bg-accent" : ""
       }`}
       style={{ paddingLeft: `${depth * 12 + 20}px` }}
+      title={
+        yaml
+          ? "Click to load • Cmd/Ctrl-click to add • Shift-click for range"
+          : "Click to preview"
+      }
     >
       <File
-        className={`w-4 h-4 shrink-0 ${isYamlFile(node.name) ? "text-primary" : "text-muted-foreground"}`}
+        className={`w-4 h-4 shrink-0 ${yaml ? "text-primary" : "text-muted-foreground"}`}
       />
-      <span className="text-sm text-foreground truncate">{node.name}</span>
+      <span
+        className={`text-sm truncate ${
+          isSelected ? "text-foreground font-medium" : "text-foreground"
+        }`}
+      >
+        {node.name}
+      </span>
     </button>
   );
 };
@@ -102,16 +134,21 @@ export const FileTree = () => {
     sources,
     activeSourceId,
     fileTree,
-    selectedFilePath,
+    selectedFilePaths,
+    focusedFilePath,
+    selectionAnchor,
     loading,
     syncLoading,
     error,
     fetchSources,
     setActiveSource,
-    selectFile,
+    setSelection,
+    setFocusedFile,
+    loadFileContents,
     syncSource,
     removeSource,
   } = useSourceStore();
+
   useEffect(() => {
     if (!selectedWorkspace || !token) return;
     fetchSources(selectedWorkspace.id, token);
@@ -119,10 +156,104 @@ export const FileTree = () => {
 
   const activeSource = sources.find((s) => s.id === activeSourceId);
 
-  const handleSelectFile = async (path: string) => {
+  // Ordered list of YAML files for range-select math
+  const orderedYamlPaths = useMemo(() => {
+    if (!fileTree?.children) return [];
+    const out: string[] = [];
+    for (const child of fileTree.children) {
+      out.push(...collectYamlPaths(child, ""));
+    }
+    return out;
+  }, [fileTree]);
+
+  const selectedSet = useMemo(
+    () => new Set(selectedFilePaths),
+    [selectedFilePaths],
+  );
+
+  const handleSelectFile = async (
+    path: string,
+    isYaml: boolean,
+    e: MouseEvent,
+  ) => {
     if (!selectedWorkspace || !token || !activeSourceId) return;
 
-    await selectFile(selectedWorkspace.id, activeSourceId, path, token);
+    // Non-YAML: just preview in the YAML pane, don't touch canvas selection
+    if (!isYaml) {
+      setFocusedFile(path);
+      await loadFileContents(
+        selectedWorkspace.id,
+        activeSourceId,
+        [path],
+        token,
+      );
+      return;
+    }
+
+    const isCmd = e.metaKey || e.ctrlKey;
+    const isShift = e.shiftKey;
+    const current = selectedFilePaths;
+
+    let nextPaths: string[];
+    let nextFocused: string | null;
+    let nextAnchor: string | null = selectionAnchor;
+
+    if (isShift && selectionAnchor && orderedYamlPaths.length) {
+      const i1 = orderedYamlPaths.indexOf(selectionAnchor);
+      const i2 = orderedYamlPaths.indexOf(path);
+      if (i1 >= 0 && i2 >= 0) {
+        const [a, b] = i1 < i2 ? [i1, i2] : [i2, i1];
+        nextPaths = orderedYamlPaths.slice(a, b + 1);
+        nextFocused = path;
+      } else {
+        nextPaths = [path];
+        nextFocused = path;
+        nextAnchor = path;
+      }
+    } else if (isCmd) {
+      if (current.includes(path)) {
+        nextPaths = current.filter((p) => p !== path);
+        nextFocused = nextPaths[0] ?? null;
+      } else {
+        nextPaths = [...current, path];
+        nextFocused = path;
+      }
+      nextAnchor = path;
+    } else {
+      nextPaths = [path];
+      nextFocused = path;
+      nextAnchor = path;
+    }
+
+    setSelection(nextPaths, nextFocused, nextAnchor);
+    if (nextPaths.length > 0) {
+      await loadFileContents(
+        selectedWorkspace.id,
+        activeSourceId,
+        nextPaths,
+        token,
+      );
+    }
+  };
+
+  const handleSelectAll = async () => {
+    if (!selectedWorkspace || !token || !activeSourceId) return;
+    if (orderedYamlPaths.length === 0) return;
+    setSelection(
+      orderedYamlPaths,
+      orderedYamlPaths[0],
+      orderedYamlPaths[0],
+    );
+    await loadFileContents(
+      selectedWorkspace.id,
+      activeSourceId,
+      orderedYamlPaths,
+      token,
+    );
+  };
+
+  const handleDeselectAll = () => {
+    setSelection([], null, null);
   };
 
   const handleSync = async () => {
@@ -255,13 +386,39 @@ export const FileTree = () => {
                 node={node}
                 path=""
                 depth={0}
-                selectedPath={selectedFilePath}
+                selectedPaths={selectedSet}
+                focusedPath={focusedFilePath}
                 onSelectFile={handleSelectFile}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* Selection footer */}
+      {orderedYamlPaths.length > 0 && (
+        <div className="border-t border-border px-3 py-2 flex items-center justify-between gap-2 bg-muted/30">
+          <span className="text-[11px] text-muted-foreground">
+            {selectedFilePaths.length} / {orderedYamlPaths.length} selected
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleSelectAll}
+              className="text-[11px] px-2 py-1 rounded hover:bg-accent text-foreground"
+              title="Select all YAML files in this source"
+            >
+              All
+            </button>
+            <button
+              onClick={handleDeselectAll}
+              disabled={selectedFilePaths.length === 0}
+              className="text-[11px] px-2 py-1 rounded hover:bg-accent text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

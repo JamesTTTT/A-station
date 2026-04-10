@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ReactFlow,
   Background,
@@ -6,6 +6,7 @@ import {
   MiniMap,
   BackgroundVariant,
   Panel,
+  type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCanvasStore } from "@/stores/canvasStore";
@@ -17,7 +18,7 @@ import { Button } from "@/components/ui";
 import { Play, List, Columns } from "lucide-react";
 import { useJobExecution } from "@/hooks";
 import type { FileTreeNode } from "@/types";
-import type { ViewMode } from "@/types/nodes";
+import type { ViewMode, AnyNodeData } from "@/types/nodes";
 
 function collectInventoryPaths(
   node: FileTreeNode,
@@ -57,6 +58,11 @@ const VIEW_MODE_OPTIONS: { value: ViewMode; label: string; icon: typeof List }[]
   { value: "grouped", label: "Grouped", icon: Columns },
 ];
 
+const isYamlPath = (p: string) => p.endsWith(".yml") || p.endsWith(".yaml");
+
+const playbookIdFor = (sourceId: string | null, path: string) =>
+  `${sourceId ?? "default"}::${path}`;
+
 export const Canvas = () => {
   const { executeJob } = useJobExecution();
   const { setCurrentJob } = useJobStore();
@@ -67,13 +73,16 @@ export const Canvas = () => {
     onEdgesChange,
     onConnect,
     loadFromYAML,
+    loadMultiplePlaybooks,
     clearCanvas,
     viewMode,
     setViewMode,
   } = useCanvasStore();
   const {
-    selectedFilePath,
-    selectedFileContent,
+    selectedFilePaths,
+    fileContents,
+    focusedFilePath,
+    setFocusedFile,
     activeSourceId,
     fileTree,
   } = useSourceStore();
@@ -81,16 +90,36 @@ export const Canvas = () => {
 
   const [inventoryPath, setInventoryPath] = useState<string>("");
 
-  // Reload canvas when view mode changes
+  // Reload canvas when selection / contents / view mode change
   useEffect(() => {
-    if (
-      selectedFileContent &&
-      selectedFilePath &&
-      (selectedFilePath.endsWith(".yml") || selectedFilePath.endsWith(".yaml"))
-    ) {
-      loadFromYAML(selectedFileContent, selectedFilePath, activeSourceId || "default");
+    const yamlPaths = selectedFilePaths.filter(isYamlPath);
+    if (yamlPaths.length === 0) return;
+
+    // Wait until all selected files have content cached
+    const allLoaded = yamlPaths.every((p) => fileContents[p] !== undefined);
+    if (!allLoaded) return;
+
+    if (yamlPaths.length === 1) {
+      const p = yamlPaths[0];
+      loadFromYAML(fileContents[p], p, playbookIdFor(activeSourceId, p));
+      return;
     }
-  }, [selectedFilePath, selectedFileContent, loadFromYAML, activeSourceId, viewMode]);
+
+    loadMultiplePlaybooks(
+      yamlPaths.map((p) => ({
+        content: fileContents[p],
+        filename: p,
+        id: playbookIdFor(activeSourceId, p),
+      })),
+    );
+  }, [
+    selectedFilePaths,
+    fileContents,
+    activeSourceId,
+    viewMode,
+    loadFromYAML,
+    loadMultiplePlaybooks,
+  ]);
 
   const inventoryPaths = useMemo(() => {
     if (!fileTree?.children) return [];
@@ -109,7 +138,7 @@ export const Canvas = () => {
 
   const proOptions = { hideAttribution: true };
 
-  // Count meaningful nodes (tasks + roles)
+  // Count meaningful nodes (tasks + roles + plays)
   const nodeStats = useMemo(() => {
     let tasks = 0;
     let roles = 0;
@@ -122,6 +151,32 @@ export const Canvas = () => {
     return { tasks, roles, plays };
   }, [nodes]);
 
+  // Click any node → its playbook becomes the focused one (drives YAML pane)
+  const handleNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node<AnyNodeData>) => {
+      const data = node.data;
+      if (
+        data.type === "headNode" ||
+        data.type === "simpleTask" ||
+        data.type === "roleNode" ||
+        data.type === "playbookFrame"
+      ) {
+        setFocusedFile(data.playbookFile);
+      }
+      // taskGroup nodes have no playbookFile of their own — leave focus alone
+    },
+    [setFocusedFile],
+  );
+
+  // Execute uses the focused playbook, but only if it's actually a YAML
+  // that's currently on the canvas.
+  const runnablePath =
+    focusedFilePath &&
+    isYamlPath(focusedFilePath) &&
+    selectedFilePaths.includes(focusedFilePath)
+      ? focusedFilePath
+      : null;
+
   return (
     <div className="flex-1 h-full bg-muted/70 overflow-auto relative">
       <ReactFlow
@@ -130,6 +185,7 @@ export const Canvas = () => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         proOptions={proOptions}
         fitView
@@ -139,6 +195,7 @@ export const Canvas = () => {
         <Controls />
         <MiniMap
           nodeColor={(node) => {
+            if (node.data.type === "playbookFrame") return "transparent";
             switch (node.data.state) {
               case "running":
                 return "#3b82f6";
@@ -184,13 +241,18 @@ export const Canvas = () => {
         </Panel>
 
         {/* Top-right: File info + Execute */}
-        {selectedFilePath && nodes.length > 0 && (
+        {selectedFilePaths.length > 0 && nodes.length > 0 && (
           <Panel position="top-right" className="min-w-38">
             <div className="bg-background/90 backdrop-blur px-3 py-2 rounded-lg border text-sm space-y-2">
               <div className="flex justify-between items-center gap-3">
-                <div>
-                  <div className="font-semibold">{selectedFilePath}</div>
-                  <div className="text-xs text-muted-foreground mt-1 flex gap-2">
+                <div className="min-w-0">
+                  <div className="font-semibold truncate max-w-[260px]">
+                    {focusedFilePath ?? `${selectedFilePaths.length} playbooks`}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 flex gap-2 flex-wrap">
+                    {selectedFilePaths.length > 1 && (
+                      <span>{selectedFilePaths.length} playbooks</span>
+                    )}
                     {nodeStats.plays > 0 && (
                       <span>{nodeStats.plays} plays</span>
                     )}
@@ -204,11 +266,16 @@ export const Canvas = () => {
                 </div>
 
                 <Button
-                  disabled={!inventoryPath || !activeSourceId}
+                  disabled={!inventoryPath || !activeSourceId || !runnablePath}
+                  title={
+                    runnablePath
+                      ? `Run ${runnablePath}`
+                      : "Click a playbook node to choose what to run"
+                  }
                   onClick={async () => {
                     if (
                       !activeSourceId ||
-                      !selectedFilePath ||
+                      !runnablePath ||
                       !inventoryPath ||
                       !selectedWorkspace
                     )
@@ -217,7 +284,7 @@ export const Canvas = () => {
                     const job = await executeJob({
                       workspace_id: selectedWorkspace.id,
                       source_id: activeSourceId,
-                      playbook_path: selectedFilePath,
+                      playbook_path: runnablePath,
                       inventory_path: inventoryPath,
                       ansible_version: "2.17",
                     });
