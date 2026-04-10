@@ -218,6 +218,27 @@ export class PlaybookParser {
       taskGroups: [],
       roles: [],
     };
+
+    const seenIds = new Set<string>();
+    for (const pb of playbooks) {
+      if (seenIds.has(pb.id)) {
+        return {
+          success: false,
+          headNodes: [],
+          tasks: [],
+          taskGroups: [],
+          roles: [],
+          error: `Duplicate playbook id: "${pb.id}"`,
+        };
+      }
+      seenIds.add(pb.id);
+    }
+
+    const partialErrors: Array<{
+      playbookId: string;
+      filename: string;
+      error: string;
+    }> = [];
     let globalOrder = 0;
 
     for (const pb of playbooks) {
@@ -227,13 +248,26 @@ export class PlaybookParser {
         pb.id,
         globalOrder,
       );
-      if (!result.success) return result;
+
+      if (!result.success) {
+        partialErrors.push({
+          playbookId: pb.id,
+          filename: pb.filename,
+          error: result.error ?? "Unknown parse error",
+        });
+        continue;
+      }
 
       all.headNodes.push(...result.headNodes);
       all.tasks.push(...result.tasks);
       all.taskGroups.push(...result.taskGroups);
       all.roles.push(...result.roles);
-      globalOrder += result.tasks.length + result.roles.length;
+      globalOrder +=
+        result.headNodes.length + result.tasks.length + result.roles.length;
+    }
+
+    if (partialErrors.length > 0) {
+      all.partialErrors = partialErrors;
     }
 
     return all;
@@ -390,11 +424,7 @@ export class PlaybookParser {
       return {
         name,
         vars: hasVars ? allVars : undefined,
-        tags: tags
-          ? Array.isArray(tags)
-            ? tags
-            : [tags]
-          : undefined,
+        tags: tags ? (Array.isArray(tags) ? tags : [tags]) : undefined,
         when: when ? String(when) : undefined,
       };
     }

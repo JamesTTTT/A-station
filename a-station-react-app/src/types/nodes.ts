@@ -72,6 +72,7 @@ export interface ParseResult {
   taskGroups: TaskGroup[];
   roles: PlaybookRole[];
   error?: string;
+  partialErrors?: Array<{ playbookId: string; filename: string; error: string }>;
 }
 
 // === React Flow Node Data Types ===
