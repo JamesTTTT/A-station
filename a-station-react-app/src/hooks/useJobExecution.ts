@@ -200,7 +200,7 @@ export const useJobExecution = (options: UseJobExecutionOptions = {}) => {
 
       try {
         // Start the job via HTTP
-        const result = await startJob(jobData, token);
+        const result = await startJob(jobData);
 
         if (!result.success) {
           setState((prev) => ({

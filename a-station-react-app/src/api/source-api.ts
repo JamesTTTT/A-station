@@ -6,25 +6,15 @@ import type {
   FileContent,
   InventoryData,
 } from "@/types";
-
-const baseUrl = import.meta.env.VITE_BASE_URL;
+import { apiFetch } from "@/api/client";
 
 export const getSources = async (
   workspaceId: string,
-  accessToken: string,
 ): Promise<ApiResult<ProjectSource[]>> => {
   try {
-    const response = await fetch(
-      `${baseUrl}/workspaces/${workspaceId}/sources`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        credentials: "include",
-      },
-    );
+    const response = await apiFetch(`/workspaces/${workspaceId}/sources`, {
+      method: "GET",
+    });
 
     if (response.ok) {
       const data = await response.json();
@@ -42,21 +32,12 @@ export const getSources = async (
 export const createSource = async (
   workspaceId: string,
   sourceData: ProjectSourceCreate,
-  accessToken: string,
 ): Promise<ApiResult<ProjectSource>> => {
   try {
-    const response = await fetch(
-      `${baseUrl}/workspaces/${workspaceId}/sources`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        credentials: "include",
-        body: JSON.stringify(sourceData),
-      },
-    );
+    const response = await apiFetch(`/workspaces/${workspaceId}/sources`, {
+      method: "POST",
+      body: JSON.stringify(sourceData),
+    });
 
     if (response.ok) {
       const data = await response.json();
@@ -74,18 +55,11 @@ export const createSource = async (
 export const deleteSource = async (
   workspaceId: string,
   sourceId: string,
-  accessToken: string,
 ): Promise<ApiResult<void>> => {
   try {
-    const response = await fetch(
-      `${baseUrl}/workspaces/${workspaceId}/sources/${sourceId}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        credentials: "include",
-      },
+    const response = await apiFetch(
+      `/workspaces/${workspaceId}/sources/${sourceId}`,
+      { method: "DELETE" },
     );
 
     if (response.ok) {
@@ -103,18 +77,11 @@ export const deleteSource = async (
 export const syncSource = async (
   workspaceId: string,
   sourceId: string,
-  accessToken: string,
 ): Promise<ApiResult<ProjectSource>> => {
   try {
-    const response = await fetch(
-      `${baseUrl}/workspaces/${workspaceId}/sources/${sourceId}/sync`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        credentials: "include",
-      },
+    const response = await apiFetch(
+      `/workspaces/${workspaceId}/sources/${sourceId}/sync`,
+      { method: "POST" },
     );
 
     if (response.ok) {
@@ -133,18 +100,11 @@ export const syncSource = async (
 export const getFileTree = async (
   workspaceId: string,
   sourceId: string,
-  accessToken: string,
 ): Promise<ApiResult<FileTreeNode>> => {
   try {
-    const response = await fetch(
-      `${baseUrl}/workspaces/${workspaceId}/sources/${sourceId}/tree`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        credentials: "include",
-      },
+    const response = await apiFetch(
+      `/workspaces/${workspaceId}/sources/${sourceId}/tree`,
+      { method: "GET" },
     );
 
     if (response.ok) {
@@ -164,18 +124,11 @@ export const getFileContent = async (
   workspaceId: string,
   sourceId: string,
   filePath: string,
-  accessToken: string,
 ): Promise<ApiResult<FileContent>> => {
   try {
-    const response = await fetch(
-      `${baseUrl}/workspaces/${workspaceId}/sources/${sourceId}/file?path=${encodeURIComponent(filePath)}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        credentials: "include",
-      },
+    const response = await apiFetch(
+      `/workspaces/${workspaceId}/sources/${sourceId}/file?path=${encodeURIComponent(filePath)}`,
+      { method: "GET" },
     );
 
     if (response.ok) {
@@ -194,22 +147,15 @@ export const getFileContent = async (
 export const getInventory = async (
   workspaceId: string,
   sourceId: string,
-  accessToken: string,
   inventoryPath?: string,
 ): Promise<ApiResult<InventoryData>> => {
   try {
     const params = inventoryPath
       ? `?path=${encodeURIComponent(inventoryPath)}`
       : "";
-    const response = await fetch(
-      `${baseUrl}/workspaces/${workspaceId}/sources/${sourceId}/inventory${params}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        credentials: "include",
-      },
+    const response = await apiFetch(
+      `/workspaces/${workspaceId}/sources/${sourceId}/inventory${params}`,
+      { method: "GET" },
     );
 
     if (response.ok) {

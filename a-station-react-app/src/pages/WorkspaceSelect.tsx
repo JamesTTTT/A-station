@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useAuthStore } from "@/stores/authStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import type { Workspace, WorkspaceWithMembers } from "@/types/workspace";
+import type { Workspace } from "@/types/workspace";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -15,21 +13,13 @@ import { Button } from "@/components";
 import { Plus } from "lucide-react";
 
 export const WorkspaceSelect = () => {
-  const token = useAuthStore((state) => state.token);
-
   const navigate = useNavigate({ from: "/workspaces/select" });
   const { setSelectedWorkspace, fetchWorkspaces, workspaces, loading, error } =
     useWorkspaceStore();
 
-  const [workspaceDetails, setWorkspaceDetails] = useState<
-    Map<string, WorkspaceWithMembers>
-  >(new Map());
-
   useEffect(() => {
-    if (token) {
-      fetchWorkspaces(token);
-    }
-  }, [fetchWorkspaces, token]);
+    fetchWorkspaces();
+  }, [fetchWorkspaces]);
 
   const handleSelectWorkspace = (workspace: Workspace) => {
     setSelectedWorkspace(workspace);
@@ -89,65 +79,21 @@ export const WorkspaceSelect = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {workspaces.map((workspace) => {
-              const details = workspaceDetails.get(workspace.id);
-              const memberCount = details?.members.length || 0;
-              const isOwner = details?.owner_id === token;
-
-              return (
-                <Card
-                  key={workspace.id}
-                  className="hover:border-primary transition-colors cursor-pointer"
-                  onClick={() => handleSelectWorkspace(workspace)}
-                >
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      {workspace.name}
-                      {isOwner && (
-                        <span className="text-xs font-normal bg-primary/10 text-primary px-2 py-1 rounded">
-                          Owner
-                        </span>
-                      )}
-                    </CardTitle>
-                    <CardDescription>
-                      Created{" "}
-                      {new Date(workspace.created_at).toLocaleDateString()}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="text-sm font-medium text-foreground mb-2">
-                          Members ({memberCount})
-                        </div>
-                        {details && details.members.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {details.members.slice(0, 3).map((member) => (
-                              <div
-                                key={member.user_id}
-                                className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded"
-                                title={`${member.username} - ${member.role}`}
-                              >
-                                {member.username}
-                              </div>
-                            ))}
-                            {details.members.length > 3 && (
-                              <div className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded">
-                                +{details.members.length - 3} more
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-xs text-muted-foreground">
-                            Loading members...
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {workspaces.map((workspace) => (
+              <Card
+                key={workspace.id}
+                className="hover:border-primary transition-colors cursor-pointer"
+                onClick={() => handleSelectWorkspace(workspace)}
+              >
+                <CardHeader>
+                  <CardTitle>{workspace.name}</CardTitle>
+                  <CardDescription>
+                    Created{" "}
+                    {new Date(workspace.created_at).toLocaleDateString()}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
           </div>
         )}
       </div>

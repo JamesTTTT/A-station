@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuthStore } from "@/stores/authStore";
 import { useSourceStore } from "@/stores/sourceStore";
 
 interface AddSourceProps {
@@ -25,7 +24,6 @@ export const AddSource = ({
   onSuccess,
   trigger,
 }: AddSourceProps) => {
-  const token = useAuthStore((state) => state.token);
   const addSource = useSourceStore((state) => state.addSource);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -54,25 +52,16 @@ export const AddSource = ({
       return;
     }
 
-    if (!token) {
-      setError("Not authenticated");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
-    const result = await addSource(
-      workspaceId,
-      {
-        name: name.trim(),
-        source_type: sourceType,
-        ...(sourceType === "git"
-          ? { git_url: gitUrl.trim(), git_branch: gitBranch.trim() || "main" }
-          : { local_path: localPath.trim() }),
-      },
-      token,
-    );
+    const result = await addSource(workspaceId, {
+      name: name.trim(),
+      source_type: sourceType,
+      ...(sourceType === "git"
+        ? { git_url: gitUrl.trim(), git_branch: gitBranch.trim() || "main" }
+        : { local_path: localPath.trim() }),
+    });
 
     setLoading(false);
 

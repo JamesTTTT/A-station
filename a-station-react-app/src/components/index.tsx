@@ -14,3 +14,5 @@ export { DashboardNavigation } from "./DashboardNavigation";
 export { YamlCodeViewer } from "./ToolBar/YamlCodeViewer";
 export { ThemeToggle } from "./ThemeToggle";
 export { AddSource } from "./Modals/AddSource";
+export { ComingSoonDialog } from "./Modals/ComingSoonDialog";
+export { ACloudDialog } from "./Modals/ACloudDialog";
