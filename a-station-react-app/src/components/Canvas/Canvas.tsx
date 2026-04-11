@@ -178,7 +178,7 @@ export const Canvas = () => {
       : null;
 
   return (
-    <div className="flex-1 h-full bg-muted/70 overflow-auto relative">
+    <div className="w-full h-full bg-muted/70 overflow-auto relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}

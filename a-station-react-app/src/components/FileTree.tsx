@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useSourceStore } from "@/stores/sourceStore";
-import { useAuthStore } from "@/stores/authStore";
 import { AddSource } from "@/components/Modals/AddSource";
 import { Button } from "@/components/ui";
 import {
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   File,
   Folder,
   FolderOpen,
   GitBranch,
   HardDrive,
+  PanelLeftOpen,
   Plus,
   RefreshCw,
   Trash2,
@@ -21,8 +22,6 @@ import type { FileTreeNode } from "@/types";
 const isYamlFile = (name: string) =>
   name.endsWith(".yml") || name.endsWith(".yaml");
 
-// Depth-first walk that returns YAML file paths in their visual order.
-// Used as the ordered axis for shift-range selection.
 function collectYamlPaths(node: FileTreeNode, prefix: string): string[] {
   const here = prefix ? `${prefix}/${node.name}` : node.name;
   if (node.type === "file") {
@@ -127,9 +126,16 @@ const TreeNode = ({
   );
 };
 
-export const FileTree = () => {
+interface FileTreeProps {
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+export const FileTree = ({
+  collapsed = false,
+  onToggleCollapse,
+}: FileTreeProps) => {
   const { selectedWorkspace } = useWorkspaceStore();
-  const token = useAuthStore((state) => state.token);
   const {
     sources,
     activeSourceId,
@@ -150,9 +156,9 @@ export const FileTree = () => {
   } = useSourceStore();
 
   useEffect(() => {
-    if (!selectedWorkspace || !token) return;
-    fetchSources(selectedWorkspace.id, token);
-  }, [selectedWorkspace?.id, token, fetchSources]);
+    if (!selectedWorkspace) return;
+    fetchSources(selectedWorkspace.id);
+  }, [selectedWorkspace?.id, fetchSources]);
 
   const activeSource = sources.find((s) => s.id === activeSourceId);
 
@@ -176,17 +182,12 @@ export const FileTree = () => {
     isYaml: boolean,
     e: MouseEvent,
   ) => {
-    if (!selectedWorkspace || !token || !activeSourceId) return;
+    if (!selectedWorkspace || !activeSourceId) return;
 
     // Non-YAML: just preview in the YAML pane, don't touch canvas selection
     if (!isYaml) {
       setFocusedFile(path);
-      await loadFileContents(
-        selectedWorkspace.id,
-        activeSourceId,
-        [path],
-        token,
-      );
+      await loadFileContents(selectedWorkspace.id, activeSourceId, [path]);
       return;
     }
 
@@ -227,28 +228,18 @@ export const FileTree = () => {
 
     setSelection(nextPaths, nextFocused, nextAnchor);
     if (nextPaths.length > 0) {
-      await loadFileContents(
-        selectedWorkspace.id,
-        activeSourceId,
-        nextPaths,
-        token,
-      );
+      await loadFileContents(selectedWorkspace.id, activeSourceId, nextPaths);
     }
   };
 
   const handleSelectAll = async () => {
-    if (!selectedWorkspace || !token || !activeSourceId) return;
+    if (!selectedWorkspace || !activeSourceId) return;
     if (orderedYamlPaths.length === 0) return;
-    setSelection(
-      orderedYamlPaths,
-      orderedYamlPaths[0],
-      orderedYamlPaths[0],
-    );
+    setSelection(orderedYamlPaths, orderedYamlPaths[0], orderedYamlPaths[0]);
     await loadFileContents(
       selectedWorkspace.id,
       activeSourceId,
       orderedYamlPaths,
-      token,
     );
   };
 
@@ -257,14 +248,37 @@ export const FileTree = () => {
   };
 
   const handleSync = async () => {
-    if (!selectedWorkspace || !token || !activeSourceId) return;
-    await syncSource(selectedWorkspace.id, activeSourceId, token);
+    if (!selectedWorkspace || !activeSourceId) return;
+    await syncSource(selectedWorkspace.id, activeSourceId);
   };
 
   if (!selectedWorkspace) return null;
 
+  // Collapsed rail: thin vertical strip with a single expand affordance.
+  // Keeps the panel discoverable instead of hiding it entirely.
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center h-full w-full bg-background border-r border-border py-2 gap-2">
+        <button
+          onClick={onToggleCollapse}
+          className="flex items-center justify-center w-8 h-8 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+          title="Expand file tree"
+          aria-label="Expand file tree"
+        >
+          <PanelLeftOpen className="w-4 h-4" />
+        </button>
+        <div
+          className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground select-none"
+          style={{ writingMode: "vertical-rl" }}
+        >
+          Files
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col w-64 h-full bg-background border-r border-border">
+    <div className="flex flex-col w-full h-full bg-background border-r border-border min-w-0">
       {/* Source selector header */}
       <div className="px-3 py-2 border-b border-border space-y-2">
         <div className="flex items-center justify-between">
@@ -274,11 +288,12 @@ export const FileTree = () => {
               <Button
                 className="flex items-center justify-center w-6 h-6 rounded bg-transparent hover:bg-destructive/10 transition-colors"
                 onClick={() => {
-                  if (!token || !activeSourceId) return;
+                  if (!activeSourceId) return;
                   const source = sources.find((s) => s.id === activeSourceId);
                   if (!source) return;
-                  if (!window.confirm(`Remove source "${source.name}"?`)) return;
-                  removeSource(selectedWorkspace.id, activeSourceId, token);
+                  if (!window.confirm(`Remove source "${source.name}"?`))
+                    return;
+                  removeSource(selectedWorkspace.id, activeSourceId);
                 }}
                 title="Remove source"
               >
@@ -293,6 +308,16 @@ export const FileTree = () => {
                 </Button>
               }
             />
+            {onToggleCollapse && (
+              <Button
+                onClick={onToggleCollapse}
+                className="flex items-center justify-center w-6 h-6 rounded bg-transparent hover:bg-accent transition-colors ml-0.5"
+                title="Collapse file tree"
+                aria-label="Collapse file tree"
+              >
+                <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" />
+              </Button>
+            )}
           </div>
         </div>
 
@@ -301,8 +326,8 @@ export const FileTree = () => {
             <select
               value={activeSourceId || ""}
               onChange={(e) => {
-                if (e.target.value && token) {
-                  setActiveSource(e.target.value, selectedWorkspace.id, token);
+                if (e.target.value) {
+                  setActiveSource(e.target.value, selectedWorkspace.id);
                 }
               }}
               className="flex-1 text-sm bg-muted border border-border rounded px-2 py-1 text-foreground truncate"
@@ -368,9 +393,7 @@ export const FileTree = () => {
           <div className="p-4 text-sm text-muted-foreground">Loading...</div>
         )}
 
-        {error && (
-          <div className="p-4 text-xs text-destructive">{error}</div>
-        )}
+        {error && <div className="p-4 text-xs text-destructive">{error}</div>}
 
         {!loading && !error && sources.length === 0 && (
           <div className="p-4 text-sm text-muted-foreground">
