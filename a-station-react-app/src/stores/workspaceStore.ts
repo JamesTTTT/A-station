@@ -11,7 +11,7 @@ interface WorkspaceStore {
   loading: boolean;
   error: string | null;
 
-  fetchWorkspaces: (authToken: string) => Promise<void>; // CHANGED
+  fetchWorkspaces: () => Promise<void>;
   setSelectedWorkspace: (workspace: Workspace) => void;
   clearSelectedWorkspace: () => void;
 }
@@ -24,16 +24,11 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       loading: false,
       error: null,
 
-      fetchWorkspaces: async (authToken: string) => {
-        if (!authToken) {
-          set({ error: "No auth token available" });
-          return;
-        }
-
+      fetchWorkspaces: async () => {
         set({ loading: true, error: null });
 
         try {
-          const result = await getWorkspaces(authToken);
+          const result = await getWorkspaces();
 
           if (result.success) {
             set({
