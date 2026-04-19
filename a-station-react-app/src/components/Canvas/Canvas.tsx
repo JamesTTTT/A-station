@@ -11,6 +11,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useSourceStore } from "@/stores/sourceStore";
+import { useCanvasSessionStore } from "@/stores/canvasSessionStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useJobStore } from "@/stores/jobStore";
 import { nodeTypes } from "@/components/Canvas/nodeTypes";
@@ -60,9 +61,6 @@ const VIEW_MODE_OPTIONS: { value: ViewMode; label: string; icon: typeof List }[]
 
 const isYamlPath = (p: string) => p.endsWith(".yml") || p.endsWith(".yaml");
 
-const playbookIdFor = (sourceId: string | null, path: string) =>
-  `${sourceId ?? "default"}::${path}`;
-
 export const Canvas = () => {
   const { executeJob } = useJobExecution();
   const { setCurrentJob } = useJobStore();
@@ -72,54 +70,19 @@ export const Canvas = () => {
     onNodesChange,
     onEdgesChange,
     onConnect,
-    loadFromYAML,
-    loadMultiplePlaybooks,
     clearCanvas,
     viewMode,
     setViewMode,
   } = useCanvasStore();
-  const {
-    selectedFilePaths,
-    fileContents,
-    focusedFilePath,
-    setFocusedFile,
-    activeSourceId,
-    fileTree,
-  } = useSourceStore();
+  const { activeSourceId, fileTree } = useSourceStore();
+
+  const selection = useCanvasSessionStore((s) => s.selection);
+  const focused = useCanvasSessionStore((s) => s.focused);
+  const sessionSetFocused = useCanvasSessionStore((s) => s.setFocused);
+
   const { selectedWorkspace } = useWorkspaceStore();
 
   const [inventoryPath, setInventoryPath] = useState<string>("");
-
-  // Reload canvas when selection / contents / view mode change
-  useEffect(() => {
-    const yamlPaths = selectedFilePaths.filter(isYamlPath);
-    if (yamlPaths.length === 0) return;
-
-    // Wait until all selected files have content cached
-    const allLoaded = yamlPaths.every((p) => fileContents[p] !== undefined);
-    if (!allLoaded) return;
-
-    if (yamlPaths.length === 1) {
-      const p = yamlPaths[0];
-      loadFromYAML(fileContents[p], p, playbookIdFor(activeSourceId, p));
-      return;
-    }
-
-    loadMultiplePlaybooks(
-      yamlPaths.map((p) => ({
-        content: fileContents[p],
-        filename: p,
-        id: playbookIdFor(activeSourceId, p),
-      })),
-    );
-  }, [
-    selectedFilePaths,
-    fileContents,
-    activeSourceId,
-    viewMode,
-    loadFromYAML,
-    loadMultiplePlaybooks,
-  ]);
 
   const inventoryPaths = useMemo(() => {
     if (!fileTree?.children) return [];
@@ -138,7 +101,6 @@ export const Canvas = () => {
 
   const proOptions = { hideAttribution: true };
 
-  // Count meaningful nodes (tasks + roles + plays)
   const nodeStats = useMemo(() => {
     let tasks = 0;
     let roles = 0;
@@ -151,7 +113,6 @@ export const Canvas = () => {
     return { tasks, roles, plays };
   }, [nodes]);
 
-  // Click any node → its playbook becomes the focused one (drives YAML pane)
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node<AnyNodeData>) => {
       const data = node.data;
@@ -161,20 +122,19 @@ export const Canvas = () => {
         data.type === "roleNode" ||
         data.type === "playbookFrame"
       ) {
-        setFocusedFile(data.playbookFile);
+        if (!selectedWorkspace || !activeSourceId) return;
+        sessionSetFocused(data.playbookFile, {
+          workspaceId: selectedWorkspace.id,
+          sourceId: activeSourceId,
+        });
       }
-      // taskGroup nodes have no playbookFile of their own — leave focus alone
     },
-    [setFocusedFile],
+    [selectedWorkspace, activeSourceId, sessionSetFocused],
   );
 
-  // Execute uses the focused playbook, but only if it's actually a YAML
-  // that's currently on the canvas.
   const runnablePath =
-    focusedFilePath &&
-    isYamlPath(focusedFilePath) &&
-    selectedFilePaths.includes(focusedFilePath)
-      ? focusedFilePath
+    focused && isYamlPath(focused) && selection.includes(focused)
+      ? focused
       : null;
 
   return (
@@ -241,17 +201,17 @@ export const Canvas = () => {
         </Panel>
 
         {/* Top-right: File info + Execute */}
-        {selectedFilePaths.length > 0 && nodes.length > 0 && (
+        {selection.length > 0 && nodes.length > 0 && (
           <Panel position="top-right" className="min-w-38">
             <div className="bg-background/90 backdrop-blur px-3 py-2 rounded-lg border text-sm space-y-2">
               <div className="flex justify-between items-center gap-3">
                 <div className="min-w-0">
                   <div className="font-semibold truncate max-w-[260px]">
-                    {focusedFilePath ?? `${selectedFilePaths.length} playbooks`}
+                    {focused ?? `${selection.length} playbooks`}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1 flex gap-2 flex-wrap">
-                    {selectedFilePaths.length > 1 && (
-                      <span>{selectedFilePaths.length} playbooks</span>
+                    {selection.length > 1 && (
+                      <span>{selection.length} playbooks</span>
                     )}
                     {nodeStats.plays > 0 && (
                       <span>{nodeStats.plays} plays</span>

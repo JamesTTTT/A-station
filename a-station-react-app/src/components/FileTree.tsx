@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useSourceStore } from "@/stores/sourceStore";
+import { useCanvasSessionStore } from "@/stores/canvasSessionStore";
 import { AddSource } from "@/components/Modals/AddSource";
 import { Button } from "@/components/ui";
 import {
+  AlertCircle,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -12,6 +14,7 @@ import {
   FolderOpen,
   GitBranch,
   HardDrive,
+  Loader2,
   PanelLeftOpen,
   Plus,
   RefreshCw,
@@ -42,6 +45,10 @@ interface TreeNodeProps {
   depth: number;
   selectedPaths: Set<string>;
   focusedPath: string | null;
+  fileStatuses: Record<
+    string,
+    { status: "loading" | "loaded" | "error"; error?: string }
+  >;
   onSelectFile: (path: string, isYaml: boolean, e: MouseEvent) => void;
 }
 
@@ -51,6 +58,7 @@ const TreeNode = ({
   depth,
   selectedPaths,
   focusedPath,
+  fileStatuses,
   onSelectFile,
 }: TreeNodeProps) => {
   const [expanded, setExpanded] = useState(depth < 1);
@@ -59,6 +67,7 @@ const TreeNode = ({
   const isSelected = selectedPaths.has(fullPath);
   const isFocused = focusedPath === fullPath;
   const yaml = !isDir && isYamlFile(node.name);
+  const status = fileStatuses[fullPath];
 
   if (isDir) {
     return (
@@ -90,6 +99,7 @@ const TreeNode = ({
                 depth={depth + 1}
                 selectedPaths={selectedPaths}
                 focusedPath={focusedPath}
+                fileStatuses={fileStatuses}
                 onSelectFile={onSelectFile}
               />
             ))}
@@ -99,29 +109,46 @@ const TreeNode = ({
     );
   }
 
+  const errored = status?.status === "error";
+  const loading = status?.status === "loading";
+
   return (
     <button
       onClick={(e) => onSelectFile(fullPath, yaml, e)}
       className={`flex w-full items-center gap-1.5 px-2 py-1 hover:bg-accent cursor-pointer text-left ${
-        isSelected ? "bg-primary/15" : isFocused ? "bg-accent" : ""
+        errored
+          ? "bg-destructive/10"
+          : isSelected
+            ? "bg-primary/15"
+            : isFocused
+              ? "bg-accent"
+              : ""
       }`}
       style={{ paddingLeft: `${depth * 12 + 20}px` }}
       title={
-        yaml
-          ? "Click to load • Cmd/Ctrl-click to add • Shift-click for range"
-          : "Click to preview"
+        errored
+          ? status?.error ?? "Failed to load"
+          : yaml
+            ? "Click to load • Cmd/Ctrl-click to add • Shift-click for range"
+            : "Click to preview"
       }
     >
       <File
         className={`w-4 h-4 shrink-0 ${yaml ? "text-primary" : "text-muted-foreground"}`}
       />
       <span
-        className={`text-sm truncate ${
+        className={`text-sm truncate flex-1 ${
           isSelected ? "text-foreground font-medium" : "text-foreground"
         }`}
       >
         {node.name}
       </span>
+      {loading && (
+        <Loader2 className="w-3 h-3 shrink-0 text-muted-foreground animate-spin" />
+      )}
+      {errored && (
+        <AlertCircle className="w-3 h-3 shrink-0 text-destructive" />
+      )}
     </button>
   );
 };
@@ -140,20 +167,24 @@ export const FileTree = ({
     sources,
     activeSourceId,
     fileTree,
-    selectedFilePaths,
-    focusedFilePath,
-    selectionAnchor,
     loading,
     syncLoading,
     error,
     fetchSources,
     setActiveSource,
-    setSelection,
-    setFocusedFile,
-    loadFileContents,
     syncSource,
     removeSource,
   } = useSourceStore();
+
+  const selection = useCanvasSessionStore((s) => s.selection);
+  const focused = useCanvasSessionStore((s) => s.focused);
+  const anchor = useCanvasSessionStore((s) => s.anchor);
+  const files = useCanvasSessionStore((s) => s.files);
+  const sessionReplace = useCanvasSessionStore((s) => s.replace);
+  const sessionToggle = useCanvasSessionStore((s) => s.toggle);
+  const sessionRange = useCanvasSessionStore((s) => s.range);
+  const sessionClear = useCanvasSessionStore((s) => s.clear);
+  const sessionSetFocused = useCanvasSessionStore((s) => s.setFocused);
 
   useEffect(() => {
     if (!selectedWorkspace) return;
@@ -162,7 +193,6 @@ export const FileTree = ({
 
   const activeSource = sources.find((s) => s.id === activeSourceId);
 
-  // Ordered list of YAML files for range-select math
   const orderedYamlPaths = useMemo(() => {
     if (!fileTree?.children) return [];
     const out: string[] = [];
@@ -172,79 +202,78 @@ export const FileTree = ({
     return out;
   }, [fileTree]);
 
-  const selectedSet = useMemo(
-    () => new Set(selectedFilePaths),
-    [selectedFilePaths],
-  );
+  const selectedSet = useMemo(() => new Set(selection), [selection]);
 
-  const handleSelectFile = async (
+  const fileStatuses = useMemo(() => {
+    const out: Record<
+      string,
+      { status: "loading" | "loaded" | "error"; error?: string }
+    > = {};
+    for (const [p, f] of Object.entries(files)) {
+      out[p] = { status: f.status, error: f.error };
+    }
+    return out;
+  }, [files]);
+
+  const loadingSelectedCount = useMemo(
+    () => selection.filter((p) => files[p]?.status === "loading").length,
+    [selection, files],
+  );
+  const totalSelected = selection.length;
+  const loadedSelectedCount = totalSelected - loadingSelectedCount;
+  const progressPct =
+    totalSelected > 0 ? (loadedSelectedCount / totalSelected) * 100 : 0;
+
+  const makeCtx = () => {
+    if (!selectedWorkspace || !activeSourceId) return null;
+    return { workspaceId: selectedWorkspace.id, sourceId: activeSourceId };
+  };
+
+  const handleSelectFile = (
     path: string,
     isYaml: boolean,
     e: MouseEvent,
   ) => {
-    if (!selectedWorkspace || !activeSourceId) return;
+    const ctx = makeCtx();
+    if (!ctx) return;
 
-    // Non-YAML: just preview in the YAML pane, don't touch canvas selection
     if (!isYaml) {
-      setFocusedFile(path);
-      await loadFileContents(selectedWorkspace.id, activeSourceId, [path]);
+      sessionSetFocused(path, ctx);
       return;
     }
 
     const isCmd = e.metaKey || e.ctrlKey;
     const isShift = e.shiftKey;
-    const current = selectedFilePaths;
 
-    let nextPaths: string[];
-    let nextFocused: string | null;
-    let nextAnchor: string | null = selectionAnchor;
-
-    if (isShift && selectionAnchor && orderedYamlPaths.length) {
-      const i1 = orderedYamlPaths.indexOf(selectionAnchor);
+    if (isShift && anchor && orderedYamlPaths.length) {
+      const i1 = orderedYamlPaths.indexOf(anchor);
       const i2 = orderedYamlPaths.indexOf(path);
       if (i1 >= 0 && i2 >= 0) {
         const [a, b] = i1 < i2 ? [i1, i2] : [i2, i1];
-        nextPaths = orderedYamlPaths.slice(a, b + 1);
-        nextFocused = path;
-      } else {
-        nextPaths = [path];
-        nextFocused = path;
-        nextAnchor = path;
+        const range = orderedYamlPaths.slice(a, b + 1);
+        sessionRange(range, path, ctx);
+        return;
       }
-    } else if (isCmd) {
-      if (current.includes(path)) {
-        nextPaths = current.filter((p) => p !== path);
-        nextFocused = nextPaths[0] ?? null;
-      } else {
-        nextPaths = [...current, path];
-        nextFocused = path;
-      }
-      nextAnchor = path;
-    } else {
-      nextPaths = [path];
-      nextFocused = path;
-      nextAnchor = path;
+      sessionReplace([path], ctx);
+      return;
     }
 
-    setSelection(nextPaths, nextFocused, nextAnchor);
-    if (nextPaths.length > 0) {
-      await loadFileContents(selectedWorkspace.id, activeSourceId, nextPaths);
+    if (isCmd) {
+      sessionToggle(path, ctx);
+      return;
     }
+
+    sessionReplace([path], ctx);
   };
 
-  const handleSelectAll = async () => {
-    if (!selectedWorkspace || !activeSourceId) return;
-    if (orderedYamlPaths.length === 0) return;
-    setSelection(orderedYamlPaths, orderedYamlPaths[0], orderedYamlPaths[0]);
-    await loadFileContents(
-      selectedWorkspace.id,
-      activeSourceId,
-      orderedYamlPaths,
-    );
+  const handleSelectAll = () => {
+    const ctx = makeCtx();
+    if (!ctx || orderedYamlPaths.length === 0) return;
+    sessionReplace(orderedYamlPaths, ctx);
   };
 
   const handleDeselectAll = () => {
-    setSelection([], null, null);
+    sessionClear();
   };
 
   const handleSync = async () => {
@@ -254,8 +283,6 @@ export const FileTree = ({
 
   if (!selectedWorkspace) return null;
 
-  // Collapsed rail: thin vertical strip with a single expand affordance.
-  // Keeps the panel discoverable instead of hiding it entirely.
   if (collapsed) {
     return (
       <div className="flex flex-col items-center h-full w-full bg-background border-r border-border py-2 gap-2">
@@ -410,7 +437,8 @@ export const FileTree = ({
                 path=""
                 depth={0}
                 selectedPaths={selectedSet}
-                focusedPath={focusedFilePath}
+                focusedPath={focused}
+                fileStatuses={fileStatuses}
                 onSelectFile={handleSelectFile}
               />
             ))}
@@ -422,7 +450,7 @@ export const FileTree = ({
       {orderedYamlPaths.length > 0 && (
         <div className="border-t border-border px-3 py-2 flex items-center justify-between gap-2 bg-muted/30">
           <span className="text-[11px] text-muted-foreground">
-            {selectedFilePaths.length} / {orderedYamlPaths.length} selected
+            {selection.length} / {orderedYamlPaths.length} selected
           </span>
           <div className="flex items-center gap-1">
             <button
@@ -434,11 +462,28 @@ export const FileTree = ({
             </button>
             <button
               onClick={handleDeselectAll}
-              disabled={selectedFilePaths.length === 0}
+              disabled={selection.length === 0}
               className="text-[11px] px-2 py-1 rounded hover:bg-accent text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Clear
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk-load progress bar */}
+      {loadingSelectedCount > 0 && (
+        <div className="border-t border-border px-3 py-1.5 bg-muted/30">
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+            <span>
+              Loading {loadedSelectedCount} / {totalSelected}
+            </span>
+          </div>
+          <div className="w-full h-1 bg-border rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-200"
+              style={{ width: `${progressPct}%` }}
+            />
           </div>
         </div>
       )}
