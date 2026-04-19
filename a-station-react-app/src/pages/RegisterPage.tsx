@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/stores/authStore";
 import type { RegisterRequest } from "@/types";
+import { toast } from "sonner";
 
 export const RegisterPage = () => {
   const register = useAuthStore((state) => state.register);
@@ -26,7 +27,9 @@ export const RegisterPage = () => {
     const registerResult = await register(registerFormData);
 
     if (!registerResult.success) {
-      setError(registerResult.error?.message || registerResult.error?.detail || "Registration failed");
+      const errorMsg = registerResult.error?.message || registerResult.error?.detail || "Registration failed";
+      setError(errorMsg);
+      toast.error("Registration failed", { description: errorMsg });
       setIsLoading(false);
       return;
     }
@@ -40,9 +43,13 @@ export const RegisterPage = () => {
     setIsLoading(false);
 
     if (loginResult.success) {
+      toast.success("Account created successfully");
       await navigate({ to: "/workspaces/select", replace: true });
     } else {
       setError("Account created but auto-login failed. Please log in manually.");
+      toast.error("Auto-login failed", {
+        description: "Account created but auto-login failed. Please log in manually.",
+      });
     }
   };
 

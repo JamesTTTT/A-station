@@ -2,6 +2,7 @@ import { LoginFields } from "@/components";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/stores/authStore.ts";
+import { toast } from "sonner";
 
 export const LoginPage = () => {
   const login = useAuthStore((state) => state.login);
@@ -17,13 +18,15 @@ export const LoginPage = () => {
     const res = await login(loginFormData);
 
     if (res.success) {
-      console.log("Logged in");
+      toast.success("Logged in successfully");
       await navigate({
         to: "/workspaces/select",
         replace: true,
       });
     } else {
-      console.log(res.error);
+      toast.error("Login failed", {
+        description: res.error?.message || res.error?.detail || "Invalid email or password",
+      });
     }
   };
 
