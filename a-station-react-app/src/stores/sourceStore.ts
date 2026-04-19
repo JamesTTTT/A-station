@@ -11,33 +11,20 @@ import {
   deleteSource,
   syncSource,
   getFileTree,
-  getFileContent,
 } from "@/api/source-api";
+import { useCanvasSessionStore } from "./canvasSessionStore";
 
 interface SourceStore {
   sources: ProjectSource[];
   activeSourceId: string | null;
   fileTree: FileTreeNode | null;
 
-  // Multi-file selection: files loaded onto the canvas (YAML only)
-  selectedFilePaths: string[];
-  // Cache of fetched file contents keyed by path
-  fileContents: Record<string, string>;
-  // The single file shown in the YAML preview pane (may be non-YAML)
-  focusedFilePath: string | null;
-  // Anchor for shift-range selection (last non-shift click)
-  selectionAnchor: string | null;
-
   loading: boolean;
-  fileLoading: boolean;
   syncLoading: boolean;
   error: string | null;
 
   fetchSources: (workspaceId: string) => Promise<void>;
-  setActiveSource: (
-    sourceId: string,
-    workspaceId: string,
-  ) => Promise<void>;
+  setActiveSource: (sourceId: string, workspaceId: string) => Promise<void>;
   addSource: (
     workspaceId: string,
     data: ProjectSourceCreate,
@@ -50,33 +37,10 @@ interface SourceStore {
     workspaceId: string,
     sourceId: string,
   ) => Promise<{ success: boolean; error?: string }>;
-  fetchFileTree: (
-    workspaceId: string,
-    sourceId: string,
-  ) => Promise<void>;
-
-  setSelection: (
-    paths: string[],
-    focused: string | null,
-    anchor: string | null,
-  ) => void;
-  setFocusedFile: (path: string | null) => void;
-  loadFileContents: (
-    workspaceId: string,
-    sourceId: string,
-    paths: string[],
-  ) => Promise<void>;
-  clearSelection: () => void;
+  fetchFileTree: (workspaceId: string, sourceId: string) => Promise<void>;
   clearAll: () => void;
   getActiveSource: () => ProjectSource | null;
 }
-
-const emptySelection = {
-  selectedFilePaths: [] as string[],
-  fileContents: {} as Record<string, string>,
-  focusedFilePath: null as string | null,
-  selectionAnchor: null as string | null,
-};
 
 export const useSourceStore = create<SourceStore>()(
   persist(
@@ -84,9 +48,7 @@ export const useSourceStore = create<SourceStore>()(
       sources: [],
       activeSourceId: null,
       fileTree: null,
-      ...emptySelection,
       loading: false,
-      fileLoading: false,
       syncLoading: false,
       error: null,
 
@@ -106,13 +68,12 @@ export const useSourceStore = create<SourceStore>()(
 
             const state = get();
             const persisted = state.activeSourceId;
-            const stillExists = persisted && result.data.some((s) => s.id === persisted);
+            const stillExists =
+              persisted && result.data.some((s) => s.id === persisted);
 
             if (stillExists) {
-              // Persisted source is valid — just load its file tree
               await get().fetchFileTree(workspaceId, persisted!);
             } else if (result.data.length > 0) {
-              // No valid persisted source — pick the first one
               get().setActiveSource(result.data[0].id, workspaceId);
             }
           } else {
@@ -124,10 +85,10 @@ export const useSourceStore = create<SourceStore>()(
       },
 
       setActiveSource: async (sourceId, workspaceId) => {
+        useCanvasSessionStore.getState().clear();
         set({
           activeSourceId: sourceId,
           fileTree: null,
-          ...emptySelection,
         });
         await get().fetchFileTree(workspaceId, sourceId);
       },
@@ -141,7 +102,6 @@ export const useSourceStore = create<SourceStore>()(
             const updated = [...state.sources, result.data];
             set({ sources: updated });
 
-            // If this is the first source, auto-activate it
             if (!state.activeSourceId) {
               get().setActiveSource(result.data.id, workspaceId);
             }
@@ -149,7 +109,10 @@ export const useSourceStore = create<SourceStore>()(
           } else {
             return {
               success: false,
-              error: result.error?.message || result.error?.detail || "Failed to add source",
+              error:
+                result.error?.message ||
+                result.error?.detail ||
+                "Failed to add source",
             };
           }
         } catch {
@@ -170,10 +133,10 @@ export const useSourceStore = create<SourceStore>()(
               if (updated.length > 0) {
                 get().setActiveSource(updated[0].id, workspaceId);
               } else {
+                useCanvasSessionStore.getState().clear();
                 set({
                   activeSourceId: null,
                   fileTree: null,
-                  ...emptySelection,
                 });
               }
             }
@@ -181,7 +144,10 @@ export const useSourceStore = create<SourceStore>()(
           } else {
             return {
               success: false,
-              error: result.error?.message || result.error?.detail || "Failed to remove source",
+              error:
+                result.error?.message ||
+                result.error?.detail ||
+                "Failed to remove source",
             };
           }
         } catch {
@@ -203,8 +169,8 @@ export const useSourceStore = create<SourceStore>()(
               syncLoading: false,
             });
 
-            // Refresh file tree if this is the active source
             if (get().activeSourceId === sourceId) {
+              useCanvasSessionStore.getState().clear();
               await get().fetchFileTree(workspaceId, sourceId);
             }
             return { success: true };
@@ -212,7 +178,8 @@ export const useSourceStore = create<SourceStore>()(
             set({ syncLoading: false });
             return {
               success: false,
-              error: result.error?.message || result.error?.detail || "Sync failed",
+              error:
+                result.error?.message || result.error?.detail || "Sync failed",
             };
           }
         } catch {
@@ -237,64 +204,13 @@ export const useSourceStore = create<SourceStore>()(
         }
       },
 
-      setSelection: (paths, focused, anchor) => {
-        set({
-          selectedFilePaths: paths,
-          focusedFilePath: focused,
-          selectionAnchor: anchor,
-        });
-      },
-
-      setFocusedFile: (path) => {
-        set({ focusedFilePath: path });
-      },
-
-      loadFileContents: async (workspaceId, sourceId, paths) => {
-        const state = get();
-        const missing = paths.filter(
-          (p) => state.fileContents[p] === undefined,
-        );
-        if (missing.length === 0) return;
-
-        set({ fileLoading: true });
-
-        try {
-          const results = await Promise.all(
-            missing.map((p) =>
-              getFileContent(workspaceId, sourceId, p).then((r) => ({
-                p,
-                r,
-              })),
-            ),
-          );
-
-          const next = { ...get().fileContents };
-          for (const { p, r } of results) {
-            if (r.success) {
-              next[p] = r.data.content;
-            }
-          }
-          set({ fileContents: next, fileLoading: false });
-        } catch {
-          set({
-            fileLoading: false,
-            error: "Failed to load file contents",
-          });
-        }
-      },
-
-      clearSelection: () => {
-        set({ ...emptySelection });
-      },
-
       clearAll: () => {
+        useCanvasSessionStore.getState().clear();
         set({
           sources: [],
           activeSourceId: null,
           fileTree: null,
-          ...emptySelection,
           loading: false,
-          fileLoading: false,
           syncLoading: false,
           error: null,
         });
