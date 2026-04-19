@@ -4,6 +4,8 @@ import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./routes";
 import "./index.css";
 import { useAuthInit } from "@/hooks/useAuthInit";
+import { Toaster } from "@/components/ui/sonner";
+import { initCanvasRebuild } from "@/stores/canvasRebuild";
 
 function App() {
   const { isInitialized } = useAuthInit();
@@ -16,8 +18,15 @@ function App() {
     );
   }
 
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster position="top-center" richColors closeButton />
+    </>
+  );
 }
+
+initCanvasRebuild();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
