@@ -87,7 +87,7 @@ export const SecondaryToolbar = ({
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-hidden h-full">
+      <div className="flex-1 overflow-hidden min-h-0">
         {activeTab === "logs" && <PlaybookLogs jobId={currentJob?.id} />}
         {activeTab === "yaml" && <YamlTab />}
         {activeTab === "llm" && (
