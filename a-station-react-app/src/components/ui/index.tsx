@@ -43,3 +43,9 @@ export {
   DialogTitle,
   DialogTrigger,
 } from "./dialog";
+
+export {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "./resizable";

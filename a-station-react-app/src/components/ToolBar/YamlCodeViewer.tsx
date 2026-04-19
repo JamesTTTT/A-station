@@ -8,14 +8,12 @@ interface YamlCodeViewerProps {
   readOnly?: boolean;
   highlightedLines?: number[];
   executionState?: Map<number, "running" | "success" | "error">;
-  height?: string;
 }
 
 export function YamlCodeViewer({
   content,
   onChange,
   readOnly = true,
-  height = "100%",
 }: YamlCodeViewerProps) {
   const extensions = useMemo(() => {
     const exts = [yaml()];
@@ -27,8 +25,8 @@ export function YamlCodeViewer({
   return (
     <div className="h-full w-full overflow-hidden">
       <CodeMirror
+        className="h-full"
         value={safeContent}
-        height={height}
         extensions={extensions}
         onChange={onChange}
         editable={!readOnly}

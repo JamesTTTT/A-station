@@ -131,8 +131,18 @@ export interface RoleNodeData {
   type: "roleNode";
 }
 
+export interface PlaybookFrameNodeData {
+  type: "playbookFrame";
+  playbookId: string;
+  playbookFile: string;
+  width: number;
+  height: number;
+  state: ExecutionState;
+}
+
 export type AnyNodeData =
   | TaskNodeData
   | HeadNodeData
   | TaskGroupNodeData
-  | RoleNodeData;
+  | RoleNodeData
+  | PlaybookFrameNodeData;

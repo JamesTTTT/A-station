@@ -1,19 +1,12 @@
 import type { ApiResult, JobCreate, JobResponse } from "@/types";
-
-const baseUrl = import.meta.env.VITE_BASE_URL;
+import { apiFetch } from "@/api/client";
 
 export const startJob = async (
   jobData: JobCreate,
-  accessToken: string
 ): Promise<ApiResult<JobResponse>> => {
   try {
-    const response = await fetch(`${baseUrl}/jobs/`, {
+    const response = await apiFetch(`/jobs/`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      credentials: "include",
       body: JSON.stringify(jobData),
     });
 
@@ -32,17 +25,9 @@ export const startJob = async (
 
 export const getJobStatus = async (
   jobId: string,
-  accessToken: string
 ): Promise<ApiResult<JobResponse>> => {
   try {
-    const response = await fetch(`${baseUrl}/jobs/${jobId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      credentials: "include",
-    });
+    const response = await apiFetch(`/jobs/${jobId}`, { method: "GET" });
 
     if (response.ok) {
       const data = await response.json();

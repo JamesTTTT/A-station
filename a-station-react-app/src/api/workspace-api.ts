@@ -1,20 +1,14 @@
 import type { ApiResult } from "@/types";
-import type { Workspace, WorkspaceWithMembers, WorkspaceCreate } from "@/types/workspace";
+import type {
+  Workspace,
+  WorkspaceWithMembers,
+  WorkspaceCreate,
+} from "@/types/workspace";
+import { apiFetch } from "@/api/client";
 
-const baseUrl = import.meta.env.VITE_BASE_URL;
-
-export const getWorkspaces = async (
-  accessToken: string
-): Promise<ApiResult<Workspace[]>> => {
+export const getWorkspaces = async (): Promise<ApiResult<Workspace[]>> => {
   try {
-    const response = await fetch(`${baseUrl}/workspaces/`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      credentials: "include",
-    });
+    const response = await apiFetch(`/workspaces/`, { method: "GET" });
 
     if (response.ok) {
       const data = await response.json();
@@ -31,16 +25,10 @@ export const getWorkspaces = async (
 
 export const getWorkspaceById = async (
   workspaceId: string,
-  accessToken: string
 ): Promise<ApiResult<WorkspaceWithMembers>> => {
   try {
-    const response = await fetch(`${baseUrl}/workspaces/${workspaceId}`, {
+    const response = await apiFetch(`/workspaces/${workspaceId}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      credentials: "include",
     });
 
     if (response.ok) {
@@ -58,16 +46,10 @@ export const getWorkspaceById = async (
 
 export const createWorkspace = async (
   workspaceData: WorkspaceCreate,
-  accessToken: string
 ): Promise<ApiResult<Workspace>> => {
   try {
-    const response = await fetch(`${baseUrl}/workspaces/`, {
+    const response = await apiFetch(`/workspaces/`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      credentials: "include",
       body: JSON.stringify(workspaceData),
     });
 

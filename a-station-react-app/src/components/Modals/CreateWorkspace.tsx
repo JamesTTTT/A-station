@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuthStore } from "@/stores/authStore";
 import { createWorkspace } from "@/api/workspace-api";
 
 interface CreateWorkspaceProps {
@@ -23,7 +22,6 @@ export const CreateWorkspace = ({
   onSuccess,
   trigger,
 }: CreateWorkspaceProps) => {
-  const token = useAuthStore((state) => state.token);
   const [open, setOpen] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,19 +35,11 @@ export const CreateWorkspace = ({
       return;
     }
 
-    if (!token) {
-      setError("Not authenticated");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      const result = await createWorkspace(
-        { name: workspaceName.trim() },
-        token,
-      );
+      const result = await createWorkspace({ name: workspaceName.trim() });
 
       if (result.success) {
         setOpen(false);

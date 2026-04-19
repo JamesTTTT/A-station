@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, subscribeWithSelector } from "zustand/middleware";
+import { toast } from "sonner";
 import {
   type Node,
   type Edge,
@@ -333,6 +334,122 @@ function buildGroupedLayout(result: ParseResult): {
   return { nodes, edges };
 }
 
+// Approximate rendered size of each node type — used for frame bbox math.
+function nodeSize(type: string): { w: number; h: number } {
+  switch (type) {
+    case "headNode":
+      return { w: 380, h: 160 };
+    case "taskGroup":
+      return { w: 280, h: 60 };
+    case "simpleTask":
+    case "roleNode":
+      return { w: 280, h: 100 };
+    default:
+      return { w: 280, h: 100 };
+  }
+}
+
+// Walks the laid-out nodes, groups them by playbookId, and prepends
+// a playbookFrame node sized to the bounding box of each group. Frame
+// nodes have zIndex -1 so real nodes sit on top and remain clickable.
+function withPlaybookFrames(
+  layoutNodes: Node<AnyNodeData>[],
+): Node<AnyNodeData>[] {
+  type Box = {
+    file: string;
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+  };
+  const boxes = new Map<string, Box>();
+
+  // First pass: build a map of headNodeId → playbookId so taskGroup nodes
+  // (which only carry parentHeadNodeId) can be attributed correctly.
+  const headToPlaybook = new Map<string, { id: string; file: string }>();
+  for (const n of layoutNodes) {
+    if (n.data.type === "headNode") {
+      headToPlaybook.set(n.id, {
+        id: n.data.playbookId,
+        file: n.data.playbookFile,
+      });
+    }
+  }
+
+  for (const n of layoutNodes) {
+    let pid: string | undefined;
+    let pfile: string | undefined;
+
+    if (
+      n.data.type === "headNode" ||
+      n.data.type === "simpleTask" ||
+      n.data.type === "roleNode"
+    ) {
+      pid = n.data.playbookId;
+      pfile = n.data.playbookFile;
+    } else if (n.data.type === "taskGroup") {
+      const parent = headToPlaybook.get(n.data.parentHeadNodeId);
+      if (parent) {
+        pid = parent.id;
+        pfile = parent.file;
+      }
+    }
+
+    if (!pid) continue;
+
+    const { w, h } = nodeSize(n.data.type);
+    const x1 = n.position.x;
+    const y1 = n.position.y;
+    const x2 = x1 + w;
+    const y2 = y1 + h;
+
+    const existing = boxes.get(pid);
+    if (existing) {
+      existing.minX = Math.min(existing.minX, x1);
+      existing.minY = Math.min(existing.minY, y1);
+      existing.maxX = Math.max(existing.maxX, x2);
+      existing.maxY = Math.max(existing.maxY, y2);
+    } else {
+      boxes.set(pid, {
+        file: pfile ?? pid,
+        minX: x1,
+        minY: y1,
+        maxX: x2,
+        maxY: y2,
+      });
+    }
+  }
+
+  const PAD = 36;
+  const TITLE_PAD = 24;
+
+  const frames: Node<AnyNodeData>[] = [];
+  for (const [pid, box] of boxes) {
+    const x = box.minX - PAD;
+    const y = box.minY - PAD - TITLE_PAD;
+    const width = box.maxX - box.minX + PAD * 2;
+    const height = box.maxY - box.minY + PAD * 2 + TITLE_PAD;
+    frames.push({
+      id: `frame-${pid}`,
+      type: "playbookFrame",
+      position: { x, y },
+      data: {
+        type: "playbookFrame",
+        playbookId: pid,
+        playbookFile: box.file,
+        width,
+        height,
+        state: "idle",
+      },
+      draggable: false,
+      selectable: false,
+      zIndex: -1,
+    });
+  }
+
+  return [...frames, ...layoutNodes];
+}
+
 function buildGroupSummary(result: ParseResult, headNodeId: string): string {
   const groups = result.taskGroups.filter(
     (g) => g.parentHeadNodeId === headNodeId,
@@ -354,6 +471,7 @@ function buildGroupSummary(result: ParseResult, headNodeId: string): string {
 // ─── Store ───
 
 export const useCanvasStore = create<CanvasStore>()(
+  subscribeWithSelector(
   persist(
     (set, get) => ({
       nodes: [],
@@ -394,7 +512,9 @@ export const useCanvasStore = create<CanvasStore>()(
         );
 
         if (!result.success) {
-          console.error("Failed to parse YAML:", result.error);
+          toast.error(`Failed to parse ${playbookFile}`, {
+            description: result.error ?? "Unknown parser error",
+          });
           set({ nodes: [], edges: [] });
           return;
         }
@@ -404,16 +524,31 @@ export const useCanvasStore = create<CanvasStore>()(
             ? buildGroupedLayout(result)
             : buildFlatLayout(result);
 
-        set(layout);
+        set({ nodes: withPlaybookFrames(layout.nodes), edges: layout.edges });
       },
 
       loadMultiplePlaybooks: (playbooks) => {
         const result = playbookParser.parseMultiple(playbooks);
 
         if (!result.success) {
-          console.error("Failed to parse playbooks:", result.error);
+          toast.error("Failed to parse playbooks", {
+            description: result.error ?? "Unknown parser error",
+          });
           set({ nodes: [], edges: [] });
           return;
+        }
+
+        if (result.partialErrors && result.partialErrors.length > 0) {
+          const n = result.partialErrors.length;
+          const first = result.partialErrors[0];
+          toast.warning(
+            `${n} playbook${n === 1 ? "" : "s"} failed to parse`,
+            {
+              description: `${first.filename}: ${first.error}${
+                n > 1 ? ` (+${n - 1} more)` : ""
+              }`,
+            },
+          );
         }
 
         const layout =
@@ -421,7 +556,7 @@ export const useCanvasStore = create<CanvasStore>()(
             ? buildGroupedLayout(result)
             : buildFlatLayout(result);
 
-        set(layout);
+        set({ nodes: withPlaybookFrames(layout.nodes), edges: layout.edges });
       },
 
       toggleHeadNodeExpansion: (headNodeId) => {
@@ -489,12 +624,8 @@ export const useCanvasStore = create<CanvasStore>()(
       name: "canvas-storage",
       partialize: (state) => ({
         viewMode: state.viewMode,
-        nodes: state.nodes.map((node) => ({
-          ...node,
-          data: { ...node.data, state: "idle" },
-        })),
-        edges: state.edges,
       }),
     },
+  ),
   ),
 );
