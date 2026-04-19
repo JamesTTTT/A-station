@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, subscribeWithSelector } from "zustand/middleware";
+import { toast } from "sonner";
 import {
   type Node,
   type Edge,
@@ -470,6 +471,7 @@ function buildGroupSummary(result: ParseResult, headNodeId: string): string {
 // ─── Store ───
 
 export const useCanvasStore = create<CanvasStore>()(
+  subscribeWithSelector(
   persist(
     (set, get) => ({
       nodes: [],
@@ -510,7 +512,9 @@ export const useCanvasStore = create<CanvasStore>()(
         );
 
         if (!result.success) {
-          console.error("Failed to parse YAML:", result.error);
+          toast.error(`Failed to parse ${playbookFile}`, {
+            description: result.error ?? "Unknown parser error",
+          });
           set({ nodes: [], edges: [] });
           return;
         }
@@ -527,9 +531,24 @@ export const useCanvasStore = create<CanvasStore>()(
         const result = playbookParser.parseMultiple(playbooks);
 
         if (!result.success) {
-          console.error("Failed to parse playbooks:", result.error);
+          toast.error("Failed to parse playbooks", {
+            description: result.error ?? "Unknown parser error",
+          });
           set({ nodes: [], edges: [] });
           return;
+        }
+
+        if (result.partialErrors && result.partialErrors.length > 0) {
+          const n = result.partialErrors.length;
+          const first = result.partialErrors[0];
+          toast.warning(
+            `${n} playbook${n === 1 ? "" : "s"} failed to parse`,
+            {
+              description: `${first.filename}: ${first.error}${
+                n > 1 ? ` (+${n - 1} more)` : ""
+              }`,
+            },
+          );
         }
 
         const layout =
@@ -605,12 +624,8 @@ export const useCanvasStore = create<CanvasStore>()(
       name: "canvas-storage",
       partialize: (state) => ({
         viewMode: state.viewMode,
-        nodes: state.nodes.map((node) => ({
-          ...node,
-          data: { ...node.data, state: "idle" },
-        })),
-        edges: state.edges,
       }),
     },
+  ),
   ),
 );
