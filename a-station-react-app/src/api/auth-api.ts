@@ -8,8 +8,32 @@ import type {
 
 const baseUrl = import.meta.env.VITE_BASE_URL;
 
+const getMe = async (accessToken: string): Promise<ApiResult<UserResponse>> => {
+  try {
+    const response = await fetch(`${baseUrl}/auth/me`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return { success: true, data };
+    } else {
+      const error = await response.json();
+      return { success: false, error };
+    }
+  } catch (err) {
+    console.error(err);
+    return { success: false, error: { message: "Server error" } };
+  }
+};
+
 const login = async (
-  credentials: LoginRequest
+  credentials: LoginRequest,
 ): Promise<ApiResult<AuthResponse>> => {
   try {
     const response = await fetch(`${baseUrl}/auth/login`, {
@@ -36,7 +60,7 @@ const login = async (
 };
 
 const register = async (
-  userData: RegisterRequest
+  userData: RegisterRequest,
 ): Promise<ApiResult<UserResponse>> => {
   try {
     const response = await fetch(`${baseUrl}/auth/register`, {
@@ -106,4 +130,4 @@ const logout = async (accessToken: string) => {
   }
 };
 
-export { login, register, refreshToken, logout };
+export { login, register, refreshToken, logout, getMe };

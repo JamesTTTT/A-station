@@ -9,7 +9,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  File,
   Folder,
   FolderOpen,
   GitBranch,
@@ -21,6 +20,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { FileTreeNode } from "@/types";
+import { getFileIcon } from "@/components/fileTreeIcons";
 
 const isYamlFile = (name: string) =>
   name.endsWith(".yml") || name.endsWith(".yaml");
@@ -111,6 +111,8 @@ const TreeNode = ({
 
   const errored = status?.status === "error";
   const loading = status?.status === "loading";
+  const fileIcon = getFileIcon(node.name);
+  const FileIcon = fileIcon.icon;
 
   return (
     <button
@@ -133,9 +135,7 @@ const TreeNode = ({
             : "Click to preview"
       }
     >
-      <File
-        className={`w-4 h-4 shrink-0 ${yaml ? "text-primary" : "text-muted-foreground"}`}
-      />
+      <FileIcon className={`w-4 h-4 shrink-0 ${fileIcon.colorClass}`} />
       <span
         className={`text-sm truncate flex-1 ${
           isSelected ? "text-foreground font-medium" : "text-foreground"

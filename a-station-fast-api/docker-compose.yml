@@ -14,6 +14,10 @@ services:
       - ~/.ssh:/root/.ssh:ro
       - ~/ansible-projects:/data/ansible-projects
       - source_data:/data/a-station/sources
+    develop:
+      watch:
+        - action: rebuild
+          path: ./requirements.txt
 
   db:
     image: postgres:17-alpine

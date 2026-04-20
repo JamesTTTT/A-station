@@ -5,6 +5,7 @@ import {
   register as registerApi,
   refreshToken,
   logout as logoutApi,
+  getMe,
 } from "@/api/auth-api";
 import type {
   LoginRequest,
@@ -19,6 +20,7 @@ interface AuthStore {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  user: UserResponse | null;
   setToken: (token: string) => void;
   clearToken: () => void;
   getToken: () => string | null;
@@ -26,6 +28,7 @@ interface AuthStore {
   register: (userData: RegisterRequest) => Promise<ApiResult<UserResponse>>;
   logout: () => Promise<void>;
   refresh: () => Promise<ApiResult<AuthResponse>>;
+  fetchMe: (token: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -36,6 +39,16 @@ export const useAuthStore = create<AuthStore>()(
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      user: null,
+
+      fetchMe: async (token: string) => {
+        const result = await getMe(token);
+        if (result.success) {
+          set({
+            user: result.data,
+          });
+        }
+      },
 
       setToken: (token: string) => {
         set({
@@ -48,6 +61,7 @@ export const useAuthStore = create<AuthStore>()(
         set({
           token: null,
           isAuthenticated: false,
+          user: null,
         });
       },
 
@@ -64,6 +78,7 @@ export const useAuthStore = create<AuthStore>()(
             isAuthenticated: true,
             isLoading: false,
           });
+          get().fetchMe(result.data.access_token);
         } else {
           set({
             token: null,
@@ -108,6 +123,7 @@ export const useAuthStore = create<AuthStore>()(
             token: result.data.access_token,
             isAuthenticated: true,
           });
+          get().fetchMe(result.data.access_token);
         } else {
           get().clearToken();
         }

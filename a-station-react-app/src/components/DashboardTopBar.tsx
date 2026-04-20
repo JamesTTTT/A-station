@@ -5,6 +5,7 @@ import { Cloud, Settings2, User } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { ComingSoonDialog } from "./Modals/ComingSoonDialog";
 import { ACloudDialog } from "./Modals/ACloudDialog";
+import { AccountDialog } from "./Modals/AccountDialog";
 
 export const DashboardTopBar = () => {
   const { selectedWorkspace } = useWorkspaceStore();
@@ -43,9 +44,7 @@ export const DashboardTopBar = () => {
           }
         />
 
-        <ComingSoonDialog
-          feature="Account"
-          description="User profile, account management, and team membership are coming soon."
+        <AccountDialog
           trigger={
             <Button
               aria-label="Account"
